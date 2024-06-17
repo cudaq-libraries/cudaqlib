@@ -25,7 +25,7 @@ target_include_directories(${LIBRARY_NAME}
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}> 
     $<BUILD_INTERFACE:${CUDAQ_INCLUDE_DIR}> 
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/tpls/json>
-    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/tpls/cppitertools>
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/tpls/cppitertools/cppitertools>
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/tpls/xtl/include>
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/tpls/xtensor/include>
   PUBLIC

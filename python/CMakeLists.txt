@@ -43,8 +43,7 @@ target_link_libraries(_pycudaqlib
     PRIVATE 
       cudaq::cudaq
       cudaq-operators
-      cudaq-optim
-      cudaq-qec)
+      cudaq-optim)
 
 if (NOT SKBUILD)
   install(DIRECTORY cudaqlib DESTINATION python/cudaqlib)

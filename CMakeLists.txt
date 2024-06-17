@@ -155,8 +155,7 @@ add_subdirectory(cmake)
 # Directory setup
 # ==============================================================================
 add_subdirectory(tpls/pybind11)
-add_subdirectory(tpls)
-add_subdirectory(cudaq-x)
+add_subdirectory(cudaqlib)
 add_subdirectory(tools)
 add_subdirectory(python)
 

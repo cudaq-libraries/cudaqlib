@@ -46,7 +46,7 @@ inline static int getCUDAQLibraryPath(struct dl_phdr_info *info, size_t size,
 }
 #endif
 
-inline static std::string getCUDAQXLibraryPath() {
+inline static std::string getCUDAQLibraryPath() {
   __internal__::CUDAQLibraryData data;
 #if defined(__APPLE__) && defined(__MACH__)
   getCUDAQLibraryPath(&data);

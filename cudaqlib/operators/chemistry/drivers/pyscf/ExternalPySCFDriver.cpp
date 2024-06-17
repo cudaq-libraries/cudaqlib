@@ -45,7 +45,7 @@ public:
     std::string oneBodyFile = outFileName + "_one_body.dat";
     std::string twoBodyFile = outFileName + "_two_body.dat";
     std::string metadataFile = outFileName + "_metadata.json";
-    std::filesystem::path libPath{cudaq::__internal__::getCUDAQLibraryPath()};
+    std::filesystem::path libPath{cudaqlib::__internal__::getCUDAQLibraryPath()};
     auto cudaqLibPath = libPath.parent_path();
     auto cudaqPySCFTool =
         cudaqLibPath.parent_path() / "bin" / "cudaq-pyscf.py";
@@ -118,7 +118,7 @@ public:
         metadata["hf_energy"].get<double>()};
   }
 
-  CUDAQX_REGISTER_MOLECULEPACKAGEDRIVER(external_pyscf)
+  CUDAQ_REGISTER_MOLECULEPACKAGEDRIVER(external_pyscf)
 };
 
 } // namespace cudaq::operators

@@ -9,7 +9,6 @@
 #include "gse/py_gse.h"
 #include "operators/py_operators.h"
 #include "optim/py_optimizer.h"
-#include "qec/py_qec.h"
 
 #include <pybind11/stl.h>
 #include <pybind11/stl_bind.h>
@@ -19,5 +18,4 @@ PYBIND11_MODULE(_pycudaqlib, mod) {
   cudaq::optim::bindOptim(mod);
   cudaq::gse::bindGse(mod);
   cudaq::operators::bindOperators(mod);
-  cudaq::qec::bindQec(mod);
 }

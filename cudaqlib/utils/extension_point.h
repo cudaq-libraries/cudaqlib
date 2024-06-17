@@ -48,7 +48,7 @@ public:
 
 #define CONCAT(a, b) CONCAT_INNER(a, b)
 #define CONCAT_INNER(a, b) a##b
-#define CUDAQX_DEFINE_EXTENSION_IMPL(TYPE)                                     \
+#define CUDAQ_DEFINE_EXTENSION_IMPL(TYPE)                                     \
   namespace details {                                                          \
   template <class T>                                                           \
   class CONCAT(TYPE, _impl) : public TYPE {                                    \
