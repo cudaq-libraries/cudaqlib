@@ -1,0 +1,18 @@
+[submodule "tpls/googletest"]
+	path = tpls/googletest
+	url = https://github.com/google/googletest
+[submodule "tpls/pybind11"]
+	path = tpls/pybind11
+	url = https://github.com/pybind/pybind11
+[submodule "tpls/xtl"]
+	path = tpls/xtl
+	url = https://github.com/xtensor-stack/xtl
+[submodule "tpls/xtensor"]
+	path = tpls/xtensor
+	url = https://github.com/xtensor-stack/xtensor
+[submodule "tpls/cppitertools"]
+	path = tpls/cppitertools
+	url = https://github.com/ryanhaining/cppitertools
+[submodule "cudaqlib/optim/impls/lbfgs/liblbfgs"]
+	path = cudaqlib/optim/impls/lbfgs/liblbfgs
+	url = https://github.com/chokkan/liblbfgs
