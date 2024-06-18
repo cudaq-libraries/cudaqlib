@@ -9,6 +9,7 @@
 #include "MoleculePackageDriver.h"
 
 #include <fstream>
+#include <iostream> 
 
 namespace cudaq::operators {
 
@@ -76,4 +77,26 @@ molecular_hamiltonian create_molecule(const molecular_geometry &geometry,
       ->createMolecule(geometry, basis, spin, charge, options);
 }
 
+void molecule_options::dump() {
+  std::cout << "\tmolecule_options dump() [\n";
+  std::cout << "\tfermion_to_string: " << fermion_to_string << "\n";
+  std::cout << "\ttype: " << type << "\n";
+  std::cout << "\tsymmetry: " << symmetry << "\n";
+  std::cout << "\tcycles: " << cycles << "\n";
+  std::cout << "\tinitguess: " << initguess << "\n";
+  std::cout << "\tnele_cas: " << nele_cas.value() << "\n";
+  std::cout << "\tnorb_cas: " << norb_cas.value() << "\n";
+  std::cout << "\tUR: " << std::boolalpha << UR << "\n";
+  std::cout << "\tMP2: " << std::boolalpha << MP2 << "\n";
+  std::cout << "\tnatorb: " << std::boolalpha << natorb << "\n";
+  std::cout << "\tcasci: " << std::boolalpha << casci << "\n";
+  std::cout << "\tccsd: " << std::boolalpha << ccsd << "\n";
+  std::cout << "\tcasscf: " << std::boolalpha << casscf << "\n";
+  std::cout << "\tintegrals_natorb: " << std::boolalpha << integrals_natorb
+            << "\n";
+  std::cout << "\tintegrals_casscf: " << std::boolalpha << integrals_casscf
+            << "\n";
+  std::cout << "\tintegrals_natorb: " << std::boolalpha << integrals_natorb
+            << "\n]\n";
+}
 } // namespace cudaq::operators

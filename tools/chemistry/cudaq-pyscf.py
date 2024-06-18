@@ -9,10 +9,12 @@ def iter_namespace(ns_pkg):
     return pkgutil.iter_modules(ns_pkg.__path__, ns_pkg.__name__ + ".")
 
 
-discovered_plugins = {
-    name: importlib.import_module(name) for finder, name, ispkg in
-    iter_namespace(cudaqlib.tools.chemistry.pyscf.generators)
-}
+discovered_plugins = {}
+for finder, name, ispkg in iter_namespace(cudaqlib.tools.chemistry.pyscf.generators):
+    try:
+        discovered_plugins[name] = importlib.import_module(name)
+    except ModuleNotFoundError:
+        pass
 
 hamiltonianGenerators = {
     plugin.get_hamiltonian_generator().name(): plugin
@@ -44,6 +46,7 @@ parser.add_argument('--memory', help="", type=float, default=4000)
 parser.add_argument('--cycles', help="", type=int, default=100)
 parser.add_argument('--initguess', help="", type=str, default='minao')
 parser.add_argument('--UR', help="", action='store_true', default=False)
+parser.add_argument('--MP2', help="", action='store_true', default=False)
 parser.add_argument('--nele_cas', help="", type=int, default=None)
 parser.add_argument('--norb_cas', help="", type=int, default=None)
 parser.add_argument('--natorb', help="", action='store_true', default=False)

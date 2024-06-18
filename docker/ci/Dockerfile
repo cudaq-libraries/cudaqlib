@@ -6,10 +6,11 @@
 # the terms of the Apache License 2.0 which accompanies this distribution.     #
 # ============================================================================ #
 
-FROM ghcr.io/nvidia/cuda-quantum-dev:latest-base
+FROM ghcr.io/cudaq-libraries/cudaqlib-base:latest
 
-RUN cd .. && git clone -b cudaqlib https://github.com/amccaskey/cuda-quantum \
-  && cd cuda-quantum && mkdir build && cd build \
-  && CC=gcc-12 CXX=g++-12 cmake -G Ninja .. -DLLVM_DIR=/opt/llvm/lib/cmake \
-     -DCUDAQ_ENABLE_PYTHON=TRUE -DCMAKE_INSTALL_PREFIX=$HOME/.cudaq \
-  && ninja install 
+RUN apt-get update && apt-get install -y gfortran libblas-dev \
+   && git clone https://github.com/cudaq-libraries/cudaqlib && cd cudaqlib && mkdir build && cd build \
+   && CC=gcc-12 CXX=g++-12 cmake -G Ninja .. -DCUDAQ_DIR=$HOME/.cudaq/lib/cmake/cudaq \
+   && ninja install \
+   && python3 -m pip install cppe
+ENV PYTHONPATH=$PYTHONPATH:/cudaqlib/build/python/cudaqlib:$HOME/.cudaq

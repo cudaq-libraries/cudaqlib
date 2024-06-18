@@ -1,7 +1,7 @@
 import os.path, sys, os
 import numpy as np
 import pathlib
-
+import cudaqlib 
 currentPath = pathlib.Path(__file__).parent.resolve()
 from cudaqlib.tools.chemistry.pyscf.generators.gas_phase_generator import GasPhaseGenerator
 from cudaqlib.tools.chemistry.pyscf.generators.polarizable_embedded_generator import PolarizableEmbeddedGenerator
@@ -9,6 +9,7 @@ from cudaqlib.tools.chemistry.pyscf.generators.polarizable_embedded_generator im
 gas_gen = GasPhaseGenerator()
 pe_gen = PolarizableEmbeddedGenerator()
 
+# FIXME when no cppe is installed
 
 def test_gas_phase():
     print('hello: ', currentPath)
@@ -43,6 +44,26 @@ def test_gas_phase_active_space():
     assert np.isclose(-96.32874, data[2], rtol=1e-3)
     assert data[3] == 6
     assert data[4] == 6
+
+
+def test_gas_phase_active_space_cudaq():
+    geometry = [('N', (0., 0., 0.56)), ('N', (0., 0., -.56))]
+    molecule = cudaqlib.operators.create_molecule(geometry,
+                                                  'sto3g',
+                                                  0,
+                                                  0,
+                                                  verbose=True,
+                                                  nele_cas=6,
+                                                  norb_cas=6,
+                                                  MP2=True,
+                                                  casci=True,
+                                                  ccsd=True,
+                                                  casscf=True)
+
+    print(molecule)
+    assert molecule.n_electrons == 6
+    assert molecule.n_orbitals == 6 
+    assert np.isclose(-107.49999, molecule.hf_energy, atol=1e-3)
 
 
 def test_pyscf_pe():

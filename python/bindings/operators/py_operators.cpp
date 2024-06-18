@@ -52,7 +52,35 @@ void bindOperators(py::module &mod) {
                     coords[2].cast<double>()}});
         }
         molecular_geometry molGeom(atoms);
-        return create_molecule(molGeom, basis, spin, charge);
+
+        molecule_options inOptions;
+        inOptions.type = getValueOr<std::string>(options, "type", "gas_phase");
+        std::optional<std::size_t> nele_cas =
+            getValueOr<std::size_t>(options, "nele_cas", -1);
+        inOptions.nele_cas = nele_cas == -1 ? std::nullopt : nele_cas;
+        std::optional<std::size_t> norb_cas =
+            getValueOr<std::size_t>(options, "norb_cas", -1);
+        inOptions.norb_cas = norb_cas == -1 ? std::nullopt : norb_cas;
+        inOptions.symmetry = getValueOr<bool>(options, "symmetry", false);
+        inOptions.memory = getValueOr<double>(options, "memory", 4000.);
+        inOptions.cycles = getValueOr<std::size_t>(options, "cycles", 100);
+        inOptions.initguess =
+            getValueOr<std::string>(options, "initguess", "minao");
+        inOptions.UR = getValueOr<bool>(options, "UR", false);
+        inOptions.MP2 = getValueOr<bool>(options, "MP2", false);
+        inOptions.natorb = getValueOr<bool>(options, "natorb", false);
+        inOptions.casci = getValueOr<bool>(options, "casci", false);
+        inOptions.ccsd = getValueOr<bool>(options, "ccsd", false);
+        inOptions.casscf = getValueOr<bool>(options, "casscf", false);
+        inOptions.integrals_natorb =
+            getValueOr<bool>(options, "integrals_natorb", false);
+        inOptions.integrals_casscf =
+            getValueOr<bool>(options, "integrals_casscf", false);
+        inOptions.verbose = getValueOr<bool>(options, "verbose", false);
+
+        if (inOptions.verbose)
+          inOptions.dump();
+        return create_molecule(molGeom, basis, spin, charge, inOptions);
       },
       "");
 }

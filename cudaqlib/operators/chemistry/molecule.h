@@ -75,6 +75,7 @@ struct molecule_options {
   bool integrals_casscf = false;
   std::optional<std::string> potfile = std::nullopt;
   bool verbose = false;
+  void dump();
 };
 
 /// @brief Given a molecular structure and other metadata,
