@@ -8,9 +8,10 @@
 
 FROM ghcr.io/cudaq-libraries/cudaqlib-base:latest
 
-RUN apt-get update && apt-get install -y gfortran libblas-dev \
-   && git clone https://github.com/cudaq-libraries/cudaqlib && cd cudaqlib && mkdir build && cd build \
-   && CC=gcc-12 CXX=g++-12 cmake -G Ninja .. -DCUDAQ_DIR=$HOME/.cudaq/lib/cmake/cudaq \
-   && ninja install \
-   && python3 -m pip install cppe
+ARG repo=cudaq-libraries/cudaqlib 
+ARG branch=main 
+
+RUN git clone -b ${branch} https://github.com/${repo} cudaqlib && cd cudaqlib && mkdir build && cd build \
+   && CC=gcc-12 CXX=g++-12 cmake -G Ninja .. -DCUDAQ_DIR=$HOME/.cudaq/lib/cmake/cudaq -DCUDAQ_TARGET=qpp-cpu \
+   && ninja install 
 ENV PYTHONPATH=$PYTHONPATH:/cudaqlib/build/python/cudaqlib:$HOME/.cudaq

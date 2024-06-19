@@ -178,7 +178,6 @@ if(CUDAQLIB_BUILD_TESTS)
   add_subdirectory(tests)
 endif()
 
-
 install (DIRECTORY cudaqlib DESTINATION include 
             FILES_MATCHING PATTERN "*.h"
             PATTERN "liblbfgs" EXCLUDE
