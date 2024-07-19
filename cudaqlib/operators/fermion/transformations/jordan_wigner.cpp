@@ -382,7 +382,7 @@ spin_op jordan_wigner::generate(const fermion_op &fermionOp) {
   return op;
 }
 
-spin_op jordan_wigner_pe::generate(const fermion_op &fermionOp){
+spin_op jordan_wigner_pe::generate(const fermion_pe_op &fermionOp){
   
   auto spin_hamiltonian = 0.0;
   std::size_t nqubit = fermionOp.vpq.shape[0];
