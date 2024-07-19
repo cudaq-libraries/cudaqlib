@@ -595,16 +595,17 @@ class GasPhaseGenerator(HamiltonianGenerator):
 
             return (obi, tbi, e_nn, nelec, norb)
 
-        if cache_data:
-            metadata = {
-                'num_electrons': nele_cas,
-                'num_orbitals': norb_cas,
-                'nuclear_energy': ecore,
-                'hf_energy': myhf.e_tot
-            }
-            with open(f'{filename}_metadata.json', 'w') as f:
-                json.dump(metadata, f)
-        return (obi, tbi, ecore, nele_cas, norb_cas)
+        else:
+            if cache_data:
+                metadata = {
+                    'num_electrons': nele_cas,
+                    'num_orbitals': norb_cas,
+                    'nuclear_energy': ecore,
+                    'hf_energy': myhf.e_tot
+                }
+                with open(f'{filename}_metadata.json', 'w') as f:
+                    json.dump(metadata, f)
+            return (obi, tbi, ecore, nele_cas, norb_cas)
 
     def generate(self, xyz, basis, **kwargs):
         if xyz == None:
