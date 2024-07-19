@@ -381,4 +381,41 @@ spin_op jordan_wigner::generate(const fermion_op &fermionOp) {
 
   return op;
 }
+
+spin_op jordan_wigner_pe::generate(const fermion_op &fermionOp){
+  
+  auto spin_hamiltonian = 0.0;
+  std::size_t nqubit = fermionOp.vpq.shape[0];
+  double tolerance = 1e-15;
+
+  for (auto p : cudaq::range(nqubit)) {
+    auto coef = fermionOp.vpq(p, p);
+    if (std::fabs(coef) > tolerance)
+      spin_hamiltonian += one_body(p, p, coef);
+  }
+
+  std::vector<std::vector<std::size_t>> next;
+  for (auto &&combo : iter::combinations(range(nqubit), 2)) {
+    auto p = combo[0];
+    auto q = combo[1];
+    next.push_back({p, q});
+    auto coef = 0.5 * (fermionOp.vpq(p, q) + std::conj(fermionOp.vpq(q, p)));
+    if (std::fabs(coef) > tolerance)
+      spin_hamiltonian += one_body(p, q, coef);
+  }
+
+  // Remove terms with 0.0 coefficient
+  std::vector<spin_op> nonZeros;
+  for (auto term : spin_hamiltonian) {
+    auto coeff = term.get_coefficient();
+    if (std::fabs(coeff) > tolerance)
+      nonZeros.push_back(term);
+  }
+  auto op = nonZeros[0];
+  for (std::size_t i = 1; i < nonZeros.size(); i++)
+    op += nonZeros[i];
+
+  return op;
+}
+
 } // namespace cudaq::operators
