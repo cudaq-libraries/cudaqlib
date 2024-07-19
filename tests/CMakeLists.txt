@@ -44,6 +44,7 @@ endif()
 target_include_directories(test_kernels PRIVATE ${CMAKE_SOURCE_DIR})
 target_link_libraries(test_kernels
   PRIVATE 
+  cudaq::cudaq-builder
   cudaq-operators
   cudaq-optim
   gtest_main)

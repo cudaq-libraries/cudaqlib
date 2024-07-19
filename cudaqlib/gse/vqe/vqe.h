@@ -34,7 +34,7 @@ struct vqe_result {
 template <typename QuantumKernel>
   requires std::invocable<QuantumKernel, std::vector<double>>
 vqe_result vqe(QuantumKernel &&kernel, const spin_op &hamiltonian,
-               optimizer &optimizer, observe_gradient &gradient,
+               optim::optimizer &optimizer, observe_gradient &gradient,
                const std::vector<double> &initial_parameters,
                optimizer_options options = optimizer_options()) {
   if (!optimizer.requiresGradients())
@@ -177,7 +177,7 @@ vqe_result vqe(QuantumKernel &&kernel, const spin_op &hamiltonian,
 template <typename QuantumKernel>
   requires std::invocable<QuantumKernel, std::vector<double>>
 vqe_result vqe(QuantumKernel &&kernel, const spin_op &hamiltonian,
-               optimizer &optimizer, const std::string &gradName,
+               optim::optimizer &optimizer, const std::string &gradName,
                const std::vector<double> &initial_parameters,
                optimizer_options options = optimizer_options()) {
 
@@ -216,7 +216,7 @@ vqe_result vqe(QuantumKernel &&kernel, const spin_op &hamiltonian,
 template <typename QuantumKernel>
   requires std::invocable<QuantumKernel, std::vector<double>>
 vqe_result vqe(QuantumKernel &&kernel, const spin_op &hamiltonian,
-               optimizer &optimizer,
+               optim::optimizer &optimizer,
                const std::vector<double> &initial_parameters,
                optimizer_options options = optimizer_options()) {
 

@@ -35,6 +35,7 @@ git clone https://github.com/cudaq-libraries/cudaqlib
 cd cudaqlib && mkdir build && cd build 
 cmake .. -G Ninja -DCUDAQ_DIR=$HOME/.cudaq/lib/cmake/cudaq 
 ninja 
+export PYTHONPATH=$HOME/.cudaq:$PWD/python/cudaqlib
 ctest 
 ```
 
