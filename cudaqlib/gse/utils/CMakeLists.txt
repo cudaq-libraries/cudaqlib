@@ -6,8 +6,4 @@
 # the terms of the Apache License 2.0 which accompanies this distribution.     #
 # ============================================================================ #
 
-import sys
-import os, os.path
-from ._pycudaqlib import *
-from .kernels import *
-from .algorithms.gqe import gqe
+add_subdirectory(pools)

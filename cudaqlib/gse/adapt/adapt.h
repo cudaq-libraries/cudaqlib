@@ -8,10 +8,9 @@
 
 #pragma once
 
-#include "cudaqlib/gse/vqe/vqe.h"
 #include "cudaq/qis/qubit_qis.h"
-
-#include "operator_pool.h"
+#include "cudaqlib/gse/utils/operator_pool.h"
+#include "cudaqlib/gse/vqe/vqe.h"
 
 namespace cudaq::gse {
 
@@ -36,7 +35,7 @@ struct AdaptKernel {
 
 template <typename InitialState>
 auto adapt_vqe(const InitialState &initialState, const spin_op &H,
-               const operator_pool &operatorPool, optim::optimizer &optimizer,
+               const std::vector<spin_op> &poolList, optim::optimizer &optimizer,
                observe_gradient *gradient,
                const adapt_options options = adapt_options()) {
 
@@ -44,7 +43,6 @@ auto adapt_vqe(const InitialState &initialState, const spin_op &H,
   std::vector<spin_op> trotterList;
   std::vector<double> thetas;
   auto numQubits = H.num_qubits();
-  auto poolList = operatorPool.generate();
   double energy = 0.0, lastNorm = std::numeric_limits<double>::max();
 
   // Compute the [H,Oi]
@@ -114,14 +112,14 @@ auto adapt_vqe(const InitialState &initialState, const spin_op &H,
 
 template <typename InitialState>
 auto adapt_vqe(const InitialState &initialState, const spin_op &H,
-               const operator_pool &operatorPool, optim::optimizer &optimizer,
+               const std::vector<spin_op> &operatorPool, optim::optimizer &optimizer,
                const adapt_options options = adapt_options()) {
   return adapt_vqe(initialState, H, operatorPool, optimizer, nullptr, options);
 }
 
 template <typename InitialState>
 auto adapt_vqe(const InitialState &initialState, const spin_op &H,
-               const operator_pool &operatorPool,
+               const std::vector<spin_op> &operatorPool,
                const adapt_options options = adapt_options()) {
   cudaq::optim::cobyla optimizer;
   return adapt_vqe(initialState, H, operatorPool, optimizer, options);
