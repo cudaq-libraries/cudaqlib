@@ -20,9 +20,9 @@ class SmallConfig(GPT2Config):
 
 class Transformer(LightningModule):
 
-    def __init__(self, cfg, label, cost, loss="exp"):
+    def __init__(self, cfg, cost,  loss="exp"):
         super().__init__()
-        self._label = label
+        self._label = 'label_stand_in'
         self.cfg = cfg
         gpt2cfg = GPT2Config(
             **{k: cfg[k] for k in GPT2Config().to_dict().keys() & cfg.keys()})
@@ -60,11 +60,11 @@ class Transformer(LightningModule):
         return torch.gather(logits_base, 2, idx.reshape(b_size, -1,
                                                         1)).reshape(b_size, -1)
 
-    def computeCost(self, idx_output, **kwargs):
-        return torch.tensor([self._cost(row) for row in idx_output],
+    def computeCost(self, idx_output, pool, **kwargs):
+        return torch.tensor([self._cost([pool[i] for i in row]) for row in idx_output],
                             dtype=torch.float)
 
-    def train_step(self, indices=None, energies=None, numQPUs=None, comm=None):
+    def train_step(self, pool, indices=None, energies=None, numQPUs=None, comm=None):
         log_values = {}
         if energies is not None:
             assert indices is not None
@@ -72,7 +72,7 @@ class Transformer(LightningModule):
             logits_base = self.generate_logits(idx_output)
         else:
             idx_output, logits_base = self.generate()
-            energies = self.computeCost(idx_output, numQPUs=numQPUs, comm=comm)
+            energies = self.computeCost(idx_output, pool, numQPUs=numQPUs, comm=comm)
         logits_tensor = self.gather(idx_output, logits_base)
         allLogits = logits_tensor
 
