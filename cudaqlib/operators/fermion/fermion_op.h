@@ -66,10 +66,10 @@ public:
 /// fermionic Hamiltonian.
 class fermion_op {
 public:
-  /// @brief The one-body overlap integrals, `h[p,q]`.
+  /// @brief The one-body integrals, `h[p,q]`.
   one_body_integrals hpq;
 
-  /// @brief The two-body overlap integrals, `h[p,q,r,s]`.
+  /// @brief The two-body integrals, `h[p,q,r,s]`.
   two_body_integrals hpqrs;
 
   /// @brief The constant energy term.
@@ -79,6 +79,20 @@ public:
       : hpq(one_body_integrals({numQubits, numQubits})),
         hpqrs(two_body_integrals({numQubits, numQubits, numQubits, numQubits})),
         constant(c) {}
+};
+
+/// @brief The `fermion_pe_op` is a simple wrapper around one
+/// body integral tensors describing a second quantized
+/// fermionic of the polarizable embedding Hamiltonian.
+
+class fermion_pe_op{
+  public:
+  /// @brief The one-body integrals, `h[p,q]`.
+  one_body_integrals vpq;
+
+  fermion_pe_op(std::size_t numQubits)
+      : vpq(one_body_integrals({numQubits, numQubits})){}
+
 };
 
 } // namespace cudaq::operators
