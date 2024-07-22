@@ -10,9 +10,12 @@
 #include <pybind11/operators.h>
 #include <pybind11/stl.h>
 
-#include "cudaqlib/gse.h"
+#include "cudaqlib/gse/utils/operator_pool.h"
+
 #include "../utils/type_casters.h"
 #include "../utils/utils.h"
+
+#include "cudaqlib/gse.h"
 
 namespace py = pybind11;
 
@@ -21,6 +24,16 @@ namespace cudaq::gse {
 void bindGse(py::module &mod) {
 
   auto gse = mod.def_submodule("gse");
+  gse.def("get_operator_pool", [](const std::string &name, py::kwargs config) {
+    std::unordered_map<std::string, std::any> asCpp;
+    for (auto &[k, v] : config) {
+      std::string asStr = k.cast<std::string>();
+
+      if (py::isinstance<py::int_>(v))
+        asCpp.insert({k.cast<std::string>(), v.cast<std::size_t>()});
+    }
+    return operator_pool::get(name)->generate(asCpp);
+  });
 
   gse.def(
       "vqe",
@@ -32,8 +45,7 @@ void bindGse(py::module &mod) {
           optOptions.max_iterations = cudaq::getValueOr<int>(
               options, "max_iterations", -1); // Or is just a dummy
 
-        optOptions.verbose =
-            cudaq::getValueOr<bool>(options, "verbose", false);
+        optOptions.verbose = cudaq::getValueOr<bool>(options, "verbose", false);
         auto optimizerName =
             cudaq::getValueOr<std::string>(options, "optimizer", "cobyla");
         auto optimizer = cudaq::optim::optimizer::get(optimizerName);
@@ -47,7 +59,7 @@ void bindGse(py::module &mod) {
         }
 
         auto gradientName = cudaq::getValueOr<std::string>(options, "gradient",
-                                                            "parameter_shift");
+                                                           "parameter_shift");
         auto gradient = cudaq::optim::observe_gradient::get(gradientName);
         gradient->set_parameterized_kernel(kernelWrapper);
         gradient->set_spin_op(op);

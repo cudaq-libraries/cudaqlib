@@ -9,10 +9,10 @@
 #include <cmath>
 #include <gtest/gtest.h>
 
+#include "cudaq.h"
 #include "cudaqlib/gse.h"
 #include "cudaqlib/kernels/uccsd.h"
 #include "cudaqlib/operators.h"
-#include "cudaq.h"
 
 std::vector<std::complex<double>> h2_hpq_data{
     -1.24884680e+00, 0.00000000e+00,  -9.24110683e-17, 0.00000000e+00,
@@ -334,4 +334,12 @@ TEST(UCCSDTester, checkUCCSDAnsatz) {
                              {.verbose = true});
     EXPECT_NEAR(result.energy, -1.137, 1e-3);
   }
+}
+
+TEST(UCCSDTester, checkOperatorPool) {
+  auto pool = cudaq::operator_pool::get("uccsd");
+  auto ops = pool->generate({{"num-qubits", 4}, {"num-electrons", 2}});
+
+  for (auto o : ops)
+    o.dump();
 }

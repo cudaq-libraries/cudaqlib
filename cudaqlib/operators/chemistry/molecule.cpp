@@ -9,7 +9,7 @@
 #include "MoleculePackageDriver.h"
 
 #include <fstream>
-#include <iostream> 
+#include <iostream>
 
 namespace cudaq::operators {
 
@@ -84,8 +84,10 @@ void molecule_options::dump() {
   std::cout << "\tsymmetry: " << symmetry << "\n";
   std::cout << "\tcycles: " << cycles << "\n";
   std::cout << "\tinitguess: " << initguess << "\n";
-  std::cout << "\tnele_cas: " << nele_cas.value() << "\n";
-  std::cout << "\tnorb_cas: " << norb_cas.value() << "\n";
+  std::cout << "\tnele_cas: " << (nele_cas.has_value() ? nele_cas.value()
+                                                      : -1) << "\n";
+  std::cout << "\tnorb_cas: " << (norb_cas.has_value() ? norb_cas.value()
+                                                      : -1) << "\n";
   std::cout << "\tUR: " << std::boolalpha << UR << "\n";
   std::cout << "\tMP2: " << std::boolalpha << MP2 << "\n";
   std::cout << "\tnatorb: " << std::boolalpha << natorb << "\n";

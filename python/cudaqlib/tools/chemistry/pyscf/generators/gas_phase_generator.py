@@ -131,7 +131,6 @@ class GasPhaseGenerator(HamiltonianGenerator):
                 "WARN: nele_cas is not None and norb_cas is None. nele_cas and norb_cas should be either both None\
                         or have values")
 
-        print("HOWDY: ", norb_cas, nele_cas)
         ########################################################################
         # To add (coming soon)
 

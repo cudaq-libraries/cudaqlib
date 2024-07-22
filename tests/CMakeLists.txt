@@ -23,7 +23,7 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND NOT APPLE)
 endif()
 target_link_libraries(test_gse
   PRIVATE 
-  cudaq-optim
+  cudaq-gse
   gtest_main)
 target_link_libraries(test_gse INTERFACE cudaq-gse)
 gtest_discover_tests(test_gse)
@@ -46,6 +46,7 @@ target_link_libraries(test_kernels
   PRIVATE 
   cudaq::cudaq-builder
   cudaq-operators
+  cudaq-operator-pools
   cudaq-optim
   gtest_main)
 gtest_discover_tests(test_kernels)

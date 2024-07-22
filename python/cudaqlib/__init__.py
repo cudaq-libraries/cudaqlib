@@ -10,3 +10,8 @@ import sys
 import os, os.path
 from ._pycudaqlib import *
 from .kernels import *
+try:
+    from .algorithms.gqe import gqe
+except:
+    print('[cudaqlib warning] Could not import GQE module. Install required modules (e.g. torch)')
+    pass

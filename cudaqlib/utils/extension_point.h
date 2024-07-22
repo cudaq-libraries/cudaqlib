@@ -27,7 +27,7 @@ public:
     auto &registry = get_registry();
     auto iter = registry.find(name);
     if (iter == registry.end())
-      throw std::runtime_error("error");
+      throw std::runtime_error("Cannot find extension with name = " + name);
 
     return iter->second(std::forward<CtorArgs>(args)...);
   }
