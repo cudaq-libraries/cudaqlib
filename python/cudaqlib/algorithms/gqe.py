@@ -148,66 +148,6 @@ class FileMonitor:
             for l in self.lines:
                 f.write(f"{l}\n")
 
-
-class GPTQETaskBase():
-
-    def __init__(self,
-                 temperature_scheduler: TemperatureScheduler = None) -> None:
-        self.temperature_scheduler = temperature_scheduler
-
-    def train(self, cfg, model, pool, optimizer):
-        fabric = L.Fabric(accelerator="auto", devices=1) # 1 device for now
-        fabric.seed_everything(cfg.seed)
-        fabric.launch()
-        min_indices, energy = self.do_train(cfg, fabric, model,pool, 
-                                            optimizer)
-        fabric.log('circuit', json.dumps(min_indices))
-        return min_indices, energy
-
-    def do_train(self, cfg, fabric, model, pool, optimizer):
-        monitor = FileMonitor()
-        model, optimizer = fabric.setup(model, optimizer)
-        model.mark_forward_method('train_step')#model.train_step)
-        pytorch_total_params = sum(
-            p.numel() for p in model.parameters() if p.requires_grad)
-        print(f"total trainable params: {pytorch_total_params / 1e6:.2f}M")
-        min_energy = sys.maxsize
-        min_indices = None
-        for epoch in range(cfg.max_iters):
-            optimizer.zero_grad()
-            l = None
-            start = time.time()
-            loss, energies, indices, log_values = model.train_step(pool)
-            print('epoch', epoch, 'model.train_step time:', time.time() - start, torch.min(energies))
-            if l is None:
-                l = loss
-            else:
-                l = l + loss
-            monitor.record(epoch, loss, energies, indices)
-            for e, indices in zip(energies, indices):
-                energy = e.item()
-                if energy < min_energy:
-                    min_energy = e.item()
-                    min_indices = indices
-            log_values[f"min_energy at"] = min_energy
-            log_values[f"temperature at"] = model.temperature
-            fabric.log_dict(log_values, step=epoch)
-            fabric.backward(loss)
-            fabric.clip_gradients(model, optimizer, max_norm=cfg.grad_norm_clip)
-            optimizer.step()
-            if self.temperature_scheduler is not None:
-                model.temperature = self.temperature_scheduler.get(epoch)
-            else:
-                model.temperature += cfg.del_temperature
-        model.set_cost(None)
-        # state = {"model": model, "optimizer": optimizer, "hparams": model.hparams}
-        # fabric.save(cfg.save_dir + f"checkpoint_{distance}.ckpt", state)
-        # if cfg.save_data:
-            # monitor.save(trajectory_file(cfg, distance))
-        indices = min_indices.cpu().numpy().tolist()
-        return min_energy, indices
-
-
 def get_default_config():
     cfg = ConfigDict()
     cfg.verbose = False
@@ -230,11 +170,57 @@ def get_default_config():
     cfg.save_dir = "./output/"
     return cfg
 
+def __internal_run_gqe(temperature_scheduler: TemperatureScheduler, cfg : ConfigDict, model, pool, optimizer):
+    fabric = L.Fabric(accelerator="auto", devices=1) # 1 device for now
+    fabric.seed_everything(cfg.seed)
+    fabric.launch()
+    monitor = FileMonitor()
+    model, optimizer = fabric.setup(model, optimizer)
+    model.mark_forward_method('train_step')#model.train_step)
+    pytorch_total_params = sum(
+        p.numel() for p in model.parameters() if p.requires_grad)
+    print(f"total trainable params: {pytorch_total_params / 1e6:.2f}M")
+    min_energy = sys.maxsize
+    min_indices = None
+    for epoch in range(cfg.max_iters):
+        optimizer.zero_grad()
+        l = None
+        start = time.time()
+        loss, energies, indices, log_values = model.train_step(pool)
+        print('epoch', epoch, 'model.train_step time:', time.time() - start, torch.min(energies))
+        if l is None:
+            l = loss
+        else:
+            l = l + loss
+        monitor.record(epoch, loss, energies, indices)
+        for e, indices in zip(energies, indices):
+            energy = e.item()
+            if energy < min_energy:
+                min_energy = e.item()
+                min_indices = indices
+        log_values[f"min_energy at"] = min_energy
+        log_values[f"temperature at"] = model.temperature
+        fabric.log_dict(log_values, step=epoch)
+        fabric.backward(loss)
+        fabric.clip_gradients(model, optimizer, max_norm=cfg.grad_norm_clip)
+        optimizer.step()
+        if temperature_scheduler is not None:
+            model.temperature = temperature_scheduler.get(epoch)
+        else:
+            model.temperature += cfg.del_temperature
+    model.set_cost(None)
+    # state = {"model": model, "optimizer": optimizer, "hparams": model.hparams}
+    # fabric.save(cfg.save_dir + f"checkpoint_{distance}.ckpt", state)
+    # if cfg.save_data:
+        # monitor.save(trajectory_file(cfg, distance))
+    min_indices = min_indices.cpu().numpy().tolist()
+    # return min_energy, indices
+    fabric.log('circuit', json.dumps(min_indices))
+    return min_energy, min_indices
 
 def gqe(cost, pool, config=None, **kwargs):
     cfg = get_default_config() if config == None else config
     cfg.vocab_size = len(pool)
-    model = Transformer(cfg, cost, loss='exp')
-    optimizer = torch.optim.AdamW(model.parameters(), lr=cfg.lr)
-    gqe = GPTQETaskBase()
-    return gqe.train(cfg, model, pool, optimizer)
+    model = Transformer(cfg, cost, loss='exp') if 'model' not in kwargs else kwargs['model']
+    optimizer = torch.optim.AdamW(model.parameters(), lr=cfg.lr) if 'optimizer' not in kwargs else kwargs['optimizer']
+    return __internal_run_gqe(None, cfg, model, pool, optimizer)
