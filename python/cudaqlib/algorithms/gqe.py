@@ -156,7 +156,7 @@ class GPTQETaskBase():
         self.temperature_scheduler = temperature_scheduler
 
     def train(self, cfg, model, pool, optimizer):
-        fabric = L.Fabric(accelerator="auto")
+        fabric = L.Fabric(accelerator="auto", devices=1) # 1 device for now
         fabric.seed_everything(cfg.seed)
         fabric.launch()
         min_indices, energy = self.do_train(cfg, fabric, model,pool, 
@@ -167,7 +167,7 @@ class GPTQETaskBase():
     def do_train(self, cfg, fabric, model, pool, optimizer):
         monitor = FileMonitor()
         model, optimizer = fabric.setup(model, optimizer)
-        model.mark_forward_method(model.train_step)
+        model.mark_forward_method('train_step')#model.train_step)
         pytorch_total_params = sum(
             p.numel() for p in model.parameters() if p.requires_grad)
         print(f"total trainable params: {pytorch_total_params / 1e6:.2f}M")
@@ -200,7 +200,7 @@ class GPTQETaskBase():
             else:
                 model.temperature += cfg.del_temperature
         model.set_cost(None)
-        state = {"model": model, "optimizer": optimizer, "hparams": model.hparams}
+        # state = {"model": model, "optimizer": optimizer, "hparams": model.hparams}
         # fabric.save(cfg.save_dir + f"checkpoint_{distance}.ckpt", state)
         # if cfg.save_data:
             # monitor.save(trajectory_file(cfg, distance))
@@ -237,4 +237,4 @@ def gqe(cost, pool, config=None, **kwargs):
     model = Transformer(cfg, cost, loss='exp')
     optimizer = torch.optim.AdamW(model.parameters(), lr=cfg.lr)
     gqe = GPTQETaskBase()
-    return gqe.train(cfg, model, pool, optimizer)#, numQPUs=1)
+    return gqe.train(cfg, model, pool, optimizer)
