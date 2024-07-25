@@ -35,8 +35,8 @@ struct AdaptKernel {
 
 template <typename InitialState>
 auto adapt_vqe(const InitialState &initialState, const spin_op &H,
-               const std::vector<spin_op> &poolList, optim::optimizer &optimizer,
-               observe_gradient *gradient,
+               const std::vector<spin_op> &poolList,
+               optim::optimizer &optimizer, observe_gradient *gradient,
                const adapt_options options = adapt_options()) {
 
   AdaptKernel kernel;
@@ -112,7 +112,8 @@ auto adapt_vqe(const InitialState &initialState, const spin_op &H,
 
 template <typename InitialState>
 auto adapt_vqe(const InitialState &initialState, const spin_op &H,
-               const std::vector<spin_op> &operatorPool, optim::optimizer &optimizer,
+               const std::vector<spin_op> &operatorPool,
+               optim::optimizer &optimizer,
                const adapt_options options = adapt_options()) {
   return adapt_vqe(initialState, H, operatorPool, optimizer, nullptr, options);
 }

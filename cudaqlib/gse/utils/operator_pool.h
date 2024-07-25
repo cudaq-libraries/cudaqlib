@@ -39,6 +39,7 @@ inline std::size_t getIntLike(const std::any &any) {
 class operator_pool : public extension_point<operator_pool> {
 public:
   operator_pool() = default;
+  virtual ~operator_pool() {}
   virtual std::vector<spin_op>
   generate(const std::unordered_map<std::string, std::any> &config) const = 0;
 };

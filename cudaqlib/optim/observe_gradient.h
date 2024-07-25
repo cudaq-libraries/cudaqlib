@@ -105,6 +105,8 @@ public:
     numRequiredExpectations = 0;
     batchIdx = 0;
   }
+
+  virtual ~observe_gradient() {}
 };
 
 CUDAQ_DEFINE_EXTENSION_IMPL(observe_gradient)

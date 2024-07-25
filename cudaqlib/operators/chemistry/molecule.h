@@ -8,8 +8,8 @@
 
 #pragma once
 
-#include "cudaqlib/operators/fermion/fermion_op.h"
 #include "cudaq/spin_op.h"
+#include "cudaqlib/operators/fermion/fermion_op.h"
 
 #include <optional>
 
@@ -39,7 +39,7 @@ public:
   auto begin() const { return atoms.cbegin(); };
   auto end() const { return atoms.cend(); }
   std::string name() const;
-  static molecular_geometry from_xyz(const std::string& xyzFile);
+  static molecular_geometry from_xyz(const std::string &xyzFile);
 };
 
 /// @brief The `molecular_hamiltonian` type holds all the pertinent
@@ -50,13 +50,11 @@ struct molecular_hamiltonian {
   operators::fermion_op fermionOperator;
   std::size_t n_electrons;
   std::size_t n_orbitals;
-  double nuclear_repulsion;
-  double hf_energy;
-  double fci_energy;
+  std::unordered_map<std::string, double> energies;
 };
 
 struct molecule_options {
-  std::string driver = "external_pyscf";
+  std::string driver = "RESTPySCFDriver";
   std::string fermion_to_string = "jordan_wigner";
   std::string type = "gas_phase";
   bool symmetry = false;
@@ -84,5 +82,7 @@ molecular_hamiltonian
 create_molecule(const molecular_geometry &geometry, const std::string &basis,
                 int spin, int charge,
                 molecule_options options = molecule_options());
+
+spin_op one_particle_op(std::size_t p, std::size_t q);
 
 } // namespace cudaq::operators

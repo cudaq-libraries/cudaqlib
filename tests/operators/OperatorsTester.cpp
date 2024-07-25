@@ -10,8 +10,8 @@
 #include <fstream>
 #include <gtest/gtest.h>
 
-#include "cudaqlib/operators.h"
 #include "cudaq.h"
+#include "cudaqlib/operators.h"
 
 std::vector<std::complex<double>> h2_hpq_data{
     -1.24884680e+00, 0.00000000e+00,  -9.24110683e-17, 0.00000000e+00,
@@ -393,12 +393,12 @@ TEST(OperatorsTester, checkJordanWigner) {
 TEST(OperatorsTester, checkMolecule) {
   cudaq::operators::molecular_geometry geometry{{"H", {0., 0., 0.}},
                                                 {"H", {0., 0., .7474}}};
-  auto molecule = cudaq::operators::create_molecule(geometry, "sto-3g", 0, 0,
-                                                    {.verbose = true});
+  auto molecule = cudaq::operators::create_molecule(
+      geometry, "sto-3g", 0, 0, {.casci = true, .verbose = true});
 
   molecule.hamiltonian.dump();
-  // EXPECT_NEAR(molecule.fci_energy, -1.137, 1e-3);
-  EXPECT_NEAR(molecule.hf_energy, -1.1163255644, 1e-3);
+  EXPECT_NEAR(molecule.energies["fci_energy"], -1.137, 1e-3);
+  EXPECT_NEAR(molecule.energies["hf_energy"], -1.1163255644, 1e-3);
   EXPECT_EQ(molecule.n_electrons, 2);
   EXPECT_EQ(molecule.n_orbitals, 2);
 
@@ -499,7 +499,15 @@ H -0.4691 -0.7570 0.0
       geometry, "631g", 0, 0,
       {.nele_cas = 6, .norb_cas = 6, .ccsd = true, .verbose = true});
 
-  molecule.hamiltonian.dump();
+  // molecule.hamiltonian.dump();
   EXPECT_EQ(molecule.n_electrons, 6);
   EXPECT_EQ(molecule.n_orbitals, 6);
+}
+
+TEST(OperatorsTester, checkOneParticleOp) {
+  auto op = cudaq::operators::one_particle_op(4, 4);
+  op.dump();
+
+  op = cudaq::operators::one_particle_op(2, 4);
+  op.dump();
 }

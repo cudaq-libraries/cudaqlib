@@ -1,8 +1,14 @@
 #!/usr/bin/env python3
 
-import argparse, json
+import argparse
 import importlib, pkgutil
 import cudaqlib.tools.chemistry.pyscf.generators
+
+from fastapi import FastAPI, Response
+from pydantic import BaseModel, PlainValidator, PlainSerializer
+import uvicorn, os, signal, importlib, pkgutil
+from typing import List, Annotated
+import numpy as np
 
 
 def iter_namespace(ns_pkg):
@@ -10,7 +16,8 @@ def iter_namespace(ns_pkg):
 
 
 discovered_plugins = {}
-for finder, name, ispkg in iter_namespace(cudaqlib.tools.chemistry.pyscf.generators):
+for finder, name, ispkg in iter_namespace(
+        cudaqlib.tools.chemistry.pyscf.generators):
     try:
         discovered_plugins[name] = importlib.import_module(name)
     except ModuleNotFoundError:
@@ -27,6 +34,8 @@ hamiltonianGenerators = {
 
 parser = argparse.ArgumentParser()
 
+parser.add_argument('--server-mode', action='store_true', default=False)
+
 # Add arguments
 parser.add_argument(
     '--type',
@@ -40,7 +49,9 @@ parser.add_argument('--charge', help="charge of the system", type=int)
 parser.add_argument('--out-file-name',
                     help='base file name for output data.',
                     type=str)
-parser.add_argument('--spin', help="no. of unpaired electrons (2 *s)", type=int)
+parser.add_argument('--spin',
+                    help="no. of unpaired electrons (2 *s)",
+                    type=int)
 parser.add_argument('--symmetry', help="", action='store_true', default=False)
 parser.add_argument('--memory', help="", type=float, default=4000)
 parser.add_argument('--cycles', help="", type=int, default=100)
@@ -69,11 +80,93 @@ parser.add_argument('--verbose',
 
 # Parse the arguments
 args = parser.parse_args()
-if args.type not in hamiltonianGenerators:
-    raise RuntimeError(f'invalid hamiltonian generator type - {args.type}')
-hamiltonianGenerator = hamiltonianGenerators[
-    args.type].get_hamiltonian_generator()
 
-filterArgs = ['xyz', 'basis']
-filteredArgs = {k: v for (k, v) in vars(args).items() if k not in filterArgs}
-hamiltonianGenerator.generate(args.xyz, args.basis, **filteredArgs)
+if not args.server_mode:
+
+    if args.type not in hamiltonianGenerators:
+        raise RuntimeError(f'invalid hamiltonian generator type - {args.type}')
+    hamiltonianGenerator = hamiltonianGenerators[
+        args.type].get_hamiltonian_generator()
+
+    filterArgs = ['xyz', 'basis']
+    filteredArgs = {
+        k: v
+        for (k, v) in vars(args).items() if k not in filterArgs
+    }
+    res = hamiltonianGenerator.generate(args.xyz, args.basis, **filteredArgs)
+    print(res)
+
+    exit(0)
+
+app = FastAPI()
+
+
+@app.get("/shutdown")
+async def shutdown():
+    os.kill(os.getpid(), signal.SIGTERM)
+    return Response(status_code=200, content='Server shutting down...')
+
+
+class IntegralsData(BaseModel):
+    data: List[List]
+
+
+class MoleculeInput(BaseModel):
+    basis: str
+    xyz: str
+    spin: int
+    charge: int
+    type: str = 'gas_phase'
+    symmetry: bool = False
+    cycles: int = 100
+    memory: float = 4000.
+    initguess: str = 'minao'
+    UR: bool = False
+    MP2: bool = False
+    natorb: bool = False
+    casci: bool = False
+    ccsd: bool = False
+    casscf: bool = False
+    integrals_natorb: bool = False
+    integrals_casscf: bool = False
+    verbose: bool = False
+    nele_cas: int = None
+    norb_cas: int = None
+    potfile: str = None
+
+
+
+class Molecule(BaseModel):
+    energies: dict
+    num_orbitals: int
+    num_electrons: int
+    hpq: IntegralsData
+    hpqrs: IntegralsData
+
+
+@app.get("/status")
+async def get_status():
+    return {"status" : "available"}
+
+@app.post("/create_molecule")
+async def create_molecule(molecule: MoleculeInput):
+    hamiltonianGenerator = hamiltonianGenerators[
+        molecule.type].get_hamiltonian_generator()
+
+    filterArgs = ['xyz', 'basis']
+    filteredArgs = {
+        k: v
+        for (k, v) in vars(molecule).items() if k not in filterArgs
+    }
+    filteredArgs['cache_data'] = False
+    res = hamiltonianGenerator.generate(molecule.xyz, molecule.basis,
+                                        **filteredArgs)
+    return Molecule(energies=res['energies'],
+                    num_orbitals=res['num_orbitals'],
+                    num_electrons=res['num_electrons'],
+                    hpq=IntegralsData(data=res['hpq']['data']),
+                    hpqrs=IntegralsData(data=res['hpqrs']['data']))
+
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000)

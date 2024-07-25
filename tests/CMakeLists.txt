@@ -44,9 +44,13 @@ endif()
 target_include_directories(test_kernels PRIVATE ${CMAKE_SOURCE_DIR})
 target_link_libraries(test_kernels
   PRIVATE 
+  cudaq::cudaq-common
+  /home/.cudaq/lib/libcpr.a
+  cudaq::cudaq
   cudaq::cudaq-builder
-  cudaq-operators
   cudaq-operator-pools
   cudaq-optim
+  cudaq-operators
+
   gtest_main)
 gtest_discover_tests(test_kernels)

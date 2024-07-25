@@ -21,14 +21,66 @@ namespace cudaq::operators {
 void bindOperators(py::module &mod) {
 
   auto operators = mod.def_submodule("operators");
+
+  operators.def("jordan_wigner", [](fermion_op &op) {
+    return fermion_to_spin::get("jordan_wigner")->generate(op);
+  });
+
+  py::class_<fermion_to_spin>(operators, "fermion_to_spin")
+      .def_static(
+          "get",
+          [](const std::string &name) { return fermion_to_spin::get(name); })
+      .def("generate", &fermion_to_spin::generate, "");
+
+  py::class_<one_body_integrals>(operators, "OneBodyIntegrals",
+                                 py::buffer_protocol())
+      .def_buffer([](one_body_integrals &m) -> py::buffer_info {
+        return py::buffer_info(
+            m.raw_data(),                 /* Pointer to buffer */
+            sizeof(std::complex<double>), /* Size of one scalar */
+            py::format_descriptor<std::complex<double>>::format(), /* Python
+                                                       struct-style format
+                                                       descriptor */
+            2,       /* Number of dimensions */
+            m.shape, /* Buffer dimensions */
+            {sizeof(std::complex<double>) *
+                 m.shape[1], /* Strides (in bytes) for each index */
+             sizeof(std::complex<double>)});
+      });
+
+  py::class_<two_body_integrals>(operators, "TwoBodyIntegrals",
+                                 py::buffer_protocol())
+      .def_buffer([](two_body_integrals &m) -> py::buffer_info {
+        auto calculateStrides = [](std::vector<std::size_t> &shape_) {
+          std::vector<size_t> strides(4);
+          strides[3] = sizeof(std::complex<double>);
+          strides[2] = strides[3] * shape_[3];
+          strides[1] = strides[2] * shape_[2];
+          strides[0] = strides[1] * shape_[1];
+          return strides;
+        };
+        return py::buffer_info(
+            m.raw_data(),                 /* Pointer to buffer */
+            sizeof(std::complex<double>), /* Size of one scalar */
+            py::format_descriptor<std::complex<double>>::format(), /* Python
+                                                       struct-style format
+                                                       descriptor */
+            4,       /* Number of dimensions */
+            m.shape, /* Buffer dimensions */
+            calculateStrides(m.shape));
+      });
+
+  py::class_<fermion_op>(operators, "FermionOperator", "")
+      .def_readonly("hpq", &fermion_op::hpq, "")
+      .def_readonly("hpqrs", &fermion_op::hpqrs, "");
+
   py::class_<molecular_hamiltonian>(operators, "MolecularHamiltonian")
+      .def_readonly("energies", &molecular_hamiltonian::energies)
       .def_readonly("hamiltonian", &molecular_hamiltonian::hamiltonian)
       .def_readonly("n_electrons", &molecular_hamiltonian::n_electrons)
-      .def_readonly("n_orbitals", &molecular_hamiltonian::n_orbitals)
-      .def_readonly("nuclear_repulsion",
-                    &molecular_hamiltonian::nuclear_repulsion)
-      .def_readonly("hf_energy", &molecular_hamiltonian::hf_energy)
-      .def_readonly("fci_energy", &molecular_hamiltonian::fci_energy);
+      .def_readonly("n_orbitals", &molecular_hamiltonian::n_orbitals);
+
+  operators.def("one_particle_op", &one_particle_op, "");
 
   operators.def(
       "create_molecule",

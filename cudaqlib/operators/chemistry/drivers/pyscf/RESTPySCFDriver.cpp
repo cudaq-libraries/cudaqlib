@@ -12,83 +12,73 @@
 #include "cudaqlib/operators/fermion/fermion_to_spin.h"
 #include "cudaqlib/utils/library_utils.h"
 
+#include "common/RestClient.h"
+
 #include <filesystem>
 #include <fmt/core.h>
 #include <fstream>
 
 namespace cudaq::operators {
 
-class external_pyscf
-    : public details::MoleculePackageDriver_impl<external_pyscf> {
-protected:
-  /// @brief Extract the coefficient data from the given binary file/
-  std::vector<std::complex<double>> readInData(const std::string &file) {
-    std::ifstream input(file, std::ios::binary);
-    if (input.fail())
-      throw std::runtime_error(file + " does not exist.");
-
-    input.seekg(0, std::ios_base::end);
-    std::size_t size = input.tellg();
-    input.seekg(0, std::ios_base::beg);
-    std::vector<std::complex<double>> input_vec(size /
-                                                sizeof(std::complex<double>));
-    input.read((char *)&input_vec[0], size);
-    return input_vec;
-  }
+class RESTPySCFDriver
+    : public details::MoleculePackageDriver_impl<RESTPySCFDriver> {
 
 public:
+  bool is_available() const override {
+    RestClient client;
+    std::map<std::string, std::string> headers;
+    try {
+      auto res = client.get("localhost:8000/", "status", headers);
+      if (res.contains("status") &&
+          res["status"].get<std::string>() == "available")
+        return true;
+    } catch (std::exception &e) {
+      return false;
+    }
+    return true;
+  }
+
   /// @brief Create the molecular hamiltonian
   operators::molecular_hamiltonian
   createMolecule(const molecular_geometry &geometry, const std::string &basis,
                  int spin, int charge, molecule_options options) override {
-    std::string toolPath, xyzFileStr = "", outFileName = "tmpFileToBeDeleted";
-    std::string oneBodyFile = outFileName + "_one_body.dat";
-    std::string twoBodyFile = outFileName + "_two_body.dat";
-    std::string metadataFile = outFileName + "_metadata.json";
-    std::filesystem::path libPath{
-        cudaqlib::__internal__::getCUDAQLibraryPath()};
-    auto cudaqLibPath = libPath.parent_path();
-    auto cudaqPySCFTool = cudaqLibPath.parent_path() / "bin" / "cudaq-pyscf.py";
-
+    std::string xyzFileStr = "";
     // Convert the geometry to an XYZ string
     for (auto &atom : geometry)
       xyzFileStr +=
           fmt::format("{} {:f} {:f} {:f}; ", atom.name, atom.coordinates[0],
                       atom.coordinates[1], atom.coordinates[2]);
-    xyzFileStr = "\"" + xyzFileStr + "\"";
 
-    std::string argString = fmt::format(
-        "{} --type {} --xyz {} --charge {} --spin {} --basis {} "
-        "--out-file-name {} "
-        "{} --memory {} {} --cycles {} --initguess {} {} {} {} {} {} {} {} {} "
-        "{} {} {}",
-        cudaqPySCFTool.string(), options.type, xyzFileStr, charge, spin, basis,
-        outFileName, options.verbose ? "--verbose" : "", options.memory,
-        options.symmetry ? "--symmetry" : "", options.cycles, options.initguess,
-        options.UR ? "--UR" : "",
-        options.nele_cas.has_value()
-            ? "--nele_cas " + std::to_string(options.nele_cas.value())
-            : "",
-        options.norb_cas.has_value()
-            ? "--norb_cas " + std::to_string(options.norb_cas.value())
-            : "",
-        options.MP2 ? "--MP2" : "", options.natorb ? "--natorb" : "",
-        options.casci ? "--casci" : "", options.ccsd ? "--ccsd" : "",
-        options.casscf ? "--casscf" : "",
-        options.integrals_natorb ? "--integrals_natorb" : "",
-        options.integrals_casscf ? "--integrals_casscf" : "",
-        options.potfile.has_value() ? "--potfile " + options.potfile.value()
-                                    : "");
+    RestClient client;
+    nlohmann::json payload = {{"xyz", xyzFileStr},
+                              {"basis", basis},
+                              {"spin", spin},
+                              {"charge", charge},
+                              {"type", "gas_phase"},
+                              {"symmetry", false},
+                              {"cycles", options.cycles},
+                              {"initguess", options.initguess},
+                              {"UR", options.UR},
+                              {"MP2", options.MP2},
+                              {"natorb", options.natorb},
+                              {"casci", options.casci},
+                              {"ccsd", options.ccsd},
+                              {"casscf", options.casscf},
+                              {"integrals_natorb", options.integrals_natorb},
+                              {"integrals_casscf", options.integrals_casscf},
+                              {"verbose", options.verbose}};
+    if (options.nele_cas.has_value())
+      payload["nele_cas"] = options.nele_cas.value();
+    if (options.norb_cas.has_value())
+      payload["norb_cas"] = options.norb_cas.value();
+    if (options.potfile.has_value())
+      payload["potfile"] = options.potfile.value();
 
-    // Run the external pyscf script
-    auto ret = std::system(argString.c_str());
-    if (ret != 0)
-      throw std::runtime_error("Failed to generate molecular data with pyscf");
+    std::map<std::string, std::string> headers{
+        {"Content-Type", "application/json"}};
+    auto metadata = client.post("localhost:8000/", "create_molecule", payload,
+                                headers, true);
 
-    // Import all the data we need from the execution.
-    std::ifstream f(metadataFile);
-    auto metadata = nlohmann::json::parse(f);
-    printf("TEST\n%s\n", metadata.dump(4).c_str());
     // Get the energy, num orbitals, and num qubits
     std::unordered_map<std::string, double> energies;
     for (auto &[energyName, E] : metadata["energies"].items())
@@ -106,6 +96,7 @@ public:
 
     // Get the operators
     fermion_op fermionOp(numQubits, energy);
+    std::unordered_map<std::string, fermion_op> operators;
     auto hpqElements = metadata["hpq"]["data"];
     auto hpqrsElements = metadata["hpqrs"]["data"];
     std::vector<std::complex<double>> hpqValues, hpqrsValues;
@@ -126,7 +117,7 @@ public:
         spinHamiltonian, std::move(fermionOp), num_electrons, numOrb, energies};
   }
 
-  CUDAQ_REGISTER_MOLECULEPACKAGEDRIVER(external_pyscf)
+  CUDAQ_REGISTER_MOLECULEPACKAGEDRIVER(RESTPySCFDriver)
 };
 
 } // namespace cudaq::operators

@@ -19,7 +19,6 @@ std::vector<spin_op> spin_complement_gsd::generate(
 
   auto numOrbitals = std::any_cast<std::size_t>(iter->second);
 
-
   std::vector<spin_op> pool;
   auto numQubits = 2 * numOrbitals;
   std::vector<int> alphaOrbs, betaOrbs;

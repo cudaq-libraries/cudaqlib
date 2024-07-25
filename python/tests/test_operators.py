@@ -12,7 +12,19 @@ import pytest
 import numpy as np
 
 import cudaq, cudaqlib
-from cudaq import spin
+
+def test_operators():
+    geometry = [('H', (0., 0., 0.)), ('H', (0., 0., .7474))]
+    molecule = cudaqlib.operators.create_molecule(
+        geometry, 'sto-3g', 0, 0, verbose=True, casci=True)
+    print(molecule.hamiltonian.to_string())
+    print(molecule.energies)
+    assert np.isclose(-1.11, molecule.energies['hf_energy'], atol=1e-2)
+    assert np.isclose(-1.13, molecule.energies['fci_energy'], atol=1e-2)
+    minE = molecule.hamiltonian.to_matrix().minimal_eigenvalue()
+    assert np.isclose(-1.13, minE, atol=1e-2)
+
+
 
 
 def test_chemistry_operators():

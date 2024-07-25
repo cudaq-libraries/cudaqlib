@@ -25,6 +25,7 @@ public:
                  int spin, int charge,
                  molecule_options options = molecule_options()) = 0;
 
+  virtual bool is_available() const { return true; }
   /// Virtual destructor needed when deleting an instance of a derived class
   /// via a pointer to the base class.
   virtual ~MoleculePackageDriver(){};
@@ -32,7 +33,7 @@ public:
 
 CUDAQ_DEFINE_EXTENSION_IMPL(MoleculePackageDriver)
 
-#define CUDAQ_REGISTER_MOLECULEPACKAGEDRIVER(TYPE)                            \
+#define CUDAQ_REGISTER_MOLECULEPACKAGEDRIVER(TYPE)                             \
   static inline const std::string class_identifier = #TYPE;                    \
   static std::unique_ptr<MoleculePackageDriver> create() {                     \
     return std::make_unique<TYPE>();                                           \
