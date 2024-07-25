@@ -8,8 +8,8 @@
 
 #pragma once
 
-#include "cudaqlib/operators/fermion/fermion_op.h"
 #include "cudaq/spin_op.h"
+#include "cudaqlib/operators/fermion/fermion_op.h"
 
 #include <optional>
 
@@ -39,7 +39,7 @@ public:
   auto begin() const { return atoms.cbegin(); };
   auto end() const { return atoms.cend(); }
   std::string name() const;
-  static molecular_geometry from_xyz(const std::string& xyzFile);
+  static molecular_geometry from_xyz(const std::string &xyzFile);
 };
 
 /// @brief The `molecular_hamiltonian` type holds all the pertinent

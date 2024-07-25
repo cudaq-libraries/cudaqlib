@@ -139,7 +139,7 @@ public:
 
 CUDAQ_DEFINE_EXTENSION_IMPL(optimizer)
 
-#define CUDAQ_REGISTER_OPTIMIZER(TYPE)                                        \
+#define CUDAQ_REGISTER_OPTIMIZER(TYPE)                                         \
   static inline const std::string class_identifier = #TYPE;                    \
   static std::unique_ptr<optimizer> create() {                                 \
     return std::make_unique<TYPE>();                                           \

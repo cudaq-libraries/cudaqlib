@@ -56,4 +56,4 @@ inline static std::string getCUDAQLibraryPath() {
   return data.path;
 }
 
-} // namespace cudaq::__internal__
+} // namespace cudaqlib::__internal__

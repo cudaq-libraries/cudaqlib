@@ -9,8 +9,8 @@
 #include <cmath>
 #include <gtest/gtest.h>
 
-#include "cudaqlib/optim.h"
 #include "cudaq.h"
+#include "cudaqlib/optim.h"
 
 TEST(OptimTester, checkLBFGS) {
 

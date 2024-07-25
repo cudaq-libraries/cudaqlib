@@ -23,7 +23,6 @@ public:
   /// generate an equivalent operator on spins.
   virtual spin_op generate(const fermion_op &fermionOp) = 0;
   virtual ~fermion_to_spin() {}
-  
 };
 
 CUDAQ_DEFINE_EXTENSION_IMPL(fermion_to_spin)

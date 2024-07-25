@@ -9,8 +9,8 @@
 #include <cmath>
 #include <gtest/gtest.h>
 
-#include "cudaqlib/gse.h"
 #include "cudaq.h"
+#include "cudaqlib/gse.h"
 
 TEST(GSETester, checkSimpleAdapt) {
 
