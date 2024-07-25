@@ -28,7 +28,6 @@ public:
   one_body_integrals(const std::vector<std::size_t> &shape);
   std::complex<double> &operator()(std::size_t i, std::size_t j) const;
   void dump();
-  void add(const std::vector<std::complex<double>> &data);
   void set_data(const std::vector<std::complex<double>> &data);
   std::complex<double> *raw_data() {
     if (ownedData)
@@ -54,7 +53,6 @@ public:
   std::complex<double> &operator()(std::size_t p, std::size_t q, std::size_t r,
                                    std::size_t s) const;
   void dump();
-  void add(const std::vector<std::complex<double>> &data);
   void set_data(const std::vector<std::complex<double>> &data);
   std::complex<double> *raw_data() {
     if (ownedData)

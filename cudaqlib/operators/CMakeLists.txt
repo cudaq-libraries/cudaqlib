@@ -31,7 +31,7 @@ target_include_directories(${LIBRARY_NAME}
     $<INSTALL_INTERFACE:${CUDAQ_INCLUDE_DIR}>
     $<INSTALL_INTERFACE:include>)
 
-target_link_libraries(${LIBRARY_NAME} PUBLIC cudaq::cudaq cudaq::cudaq-common)
+target_link_libraries(${LIBRARY_NAME} PUBLIC cudaq::cudaq)
 
 install(
     TARGETS ${LIBRARY_NAME}
