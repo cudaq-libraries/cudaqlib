@@ -12,7 +12,6 @@ import pytest
 import numpy as np
 
 import cudaq, cudaqlib
-from cudaq import spin
 
 def test_operators():
     geometry = [('H', (0., 0., 0.)), ('H', (0., 0., .7474))]

@@ -22,13 +22,14 @@ void bindOperators(py::module &mod) {
 
   auto operators = mod.def_submodule("operators");
 
-  operators.def("jordan_wigner", [](fermion_op& op) {
+  operators.def("jordan_wigner", [](fermion_op &op) {
     return fermion_to_spin::get("jordan_wigner")->generate(op);
   });
 
   py::class_<fermion_to_spin>(operators, "fermion_to_spin")
-      .def_static("get",
-           [](const std::string &name) { return fermion_to_spin::get(name); })
+      .def_static(
+          "get",
+          [](const std::string &name) { return fermion_to_spin::get(name); })
       .def("generate", &fermion_to_spin::generate, "");
 
   py::class_<one_body_integrals>(operators, "OneBodyIntegrals",
@@ -46,7 +47,7 @@ void bindOperators(py::module &mod) {
                  m.shape[1], /* Strides (in bytes) for each index */
              sizeof(std::complex<double>)});
       });
-      
+
   py::class_<two_body_integrals>(operators, "TwoBodyIntegrals",
                                  py::buffer_protocol())
       .def_buffer([](two_body_integrals &m) -> py::buffer_info {
@@ -75,12 +76,9 @@ void bindOperators(py::module &mod) {
 
   py::class_<molecular_hamiltonian>(operators, "MolecularHamiltonian")
       .def_readonly("energies", &molecular_hamiltonian::energies)
-      .def_readonly("operators", &molecular_hamiltonian::operators)
       .def_readonly("hamiltonian", &molecular_hamiltonian::hamiltonian)
       .def_readonly("n_electrons", &molecular_hamiltonian::n_electrons)
-      .def_readonly("n_orbitals", &molecular_hamiltonian::n_orbitals)
-      .def_readonly("nuclear_repulsion",
-                    &molecular_hamiltonian::nuclear_repulsion);
+      .def_readonly("n_orbitals", &molecular_hamiltonian::n_orbitals);
 
   operators.def(
       "create_molecule",

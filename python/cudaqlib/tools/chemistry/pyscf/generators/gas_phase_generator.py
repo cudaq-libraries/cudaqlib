@@ -595,33 +595,26 @@ class GasPhaseGenerator(HamiltonianGenerator):
                     h1e_cas, h2e_cas, ecore)
                 energies['core_energy'] = ecore
 
-        # Dump obi and tbi to binary file.
-        if cache_data:
-            obi.astype(complex).tofile(f'{filename}_one_body.dat')
-            tbi.astype(complex).tofile(f'{filename}_two_body.dat')
-
         ######################################################
         # Dump energies / etc to a metadata file
-        metadata = {}
-        if cache_data:
-            metadata = {
-                'num_electrons': nelec if nele_cas == None else nele_cas,
-                'num_orbitals': norb if nele_cas == None else norb_cas,
-                'hf_energy': myhf.e_tot,
-                'energies': energies,
-                'operators': {
-                    f'{filename}_one_body.dat': 'obi',
-                    f'{filename}_two_body.dat': 'tbi'
-                }
+        results = {
+            'num_electrons': nelec if nele_cas == None else nele_cas,
+            'num_orbitals': norb if nele_cas == None else norb_cas,
+            'hf_energy': myhf.e_tot,
+            'energies': energies,
+            'hpq': {'data':[(x.real,x.imag) for x in obi.astype(complex).flatten().tolist()]},
+            'hpqrs': {'data': [(x.real, x.imag) for x in tbi.astype(complex).flatten().tolist()]},
+            'operators': {
+                f'{filename}_one_body.dat': 'obi',
+                f'{filename}_two_body.dat': 'tbi'
             }
+        }
 
+        if cache_data:
             with open(f'{filename}_metadata.json', 'w') as f:
-                json.dump(metadata, f)
-        
-        if nele_cas is None:    
-            return (obi, tbi, e_nn, nelec, norb, metadata)
+                json.dump(results, f)
 
-        return (obi, tbi, ecore, nele_cas, norb_cas, metadata)
+        return results 
 
     def generate(self, xyz, basis, **kwargs):
         if xyz == None:

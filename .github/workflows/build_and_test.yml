@@ -35,3 +35,4 @@ jobs:
 
     - name: Run tests
       run: docker run --rm cudaqlib-dev:local ctest --output-on-failure --test-dir cudaqlib/build
+      run: docker run --rm cudaqlib-dev:local python3 -m pytest cudaqlib/python/tests -v 

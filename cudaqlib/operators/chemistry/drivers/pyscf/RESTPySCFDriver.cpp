@@ -32,7 +32,7 @@ public:
       if (res.contains("status") &&
           res["status"].get<std::string>() == "available")
         return true;
-    } catch (std::exception& e) {
+    } catch (std::exception &e) {
       return false;
     }
     return true;
@@ -114,8 +114,7 @@ public:
 
     // Return the molecular hamiltonian
     return operators::molecular_hamiltonian{
-        spinHamiltonian, std::move(fermionOp), num_electrons, numOrb, energy,
-        energies,        std::move(operators)};
+        spinHamiltonian, std::move(fermionOp), num_electrons, numOrb, energies};
   }
 
   CUDAQ_REGISTER_MOLECULEPACKAGEDRIVER(RESTPySCFDriver)

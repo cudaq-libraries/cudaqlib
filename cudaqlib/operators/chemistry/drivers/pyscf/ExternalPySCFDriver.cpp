@@ -88,7 +88,7 @@ public:
     // Import all the data we need from the execution.
     std::ifstream f(metadataFile);
     auto metadata = nlohmann::json::parse(f);
-
+    printf("TEST\n%s\n", metadata.dump(4).c_str());
     // Get the energy, num orbitals, and num qubits
     std::unordered_map<std::string, double> energies;
     for (auto &[energyName, E] : metadata["energies"].items())
@@ -106,22 +106,16 @@ public:
 
     // Get the operators
     fermion_op fermionOp(numQubits, energy);
-    std::unordered_map<std::string, fermion_op> operators;
-    for (auto &[opFileName, opType] : metadata["operators"].items()) {
-      auto type = opType.get<std::string>();
-      if (type == "obi")
-        fermionOp.hpq.add(readInData(opFileName));
-      else if (type == "tbi")
-        fermionOp.hpqrs.add(readInData(opFileName));
-
-      auto res = operators.insert({type, fermion_op(numQubits, energy)});
-      if (type.find("obi") != std::string::npos)
-        res.first->second.hpq.set_data(readInData(opFileName));
-      else
-        res.first->second.hpqrs.set_data(readInData(opFileName));
-
-      std::remove(opFileName.c_str());
-    }
+    auto hpqElements = metadata["hpq"]["data"];
+    auto hpqrsElements = metadata["hpqrs"]["data"];
+    std::vector<std::complex<double>> hpqValues, hpqrsValues;
+    for (auto &element : hpqElements)
+      hpqValues.push_back({element[0].get<double>(), element[1].get<double>()});
+    for (auto &element : hpqrsElements)
+      hpqrsValues.push_back(
+          {element[0].get<double>(), element[1].get<double>()});
+    fermionOp.hpq.set_data(hpqValues);
+    fermionOp.hpqrs.set_data(hpqrsValues);
 
     // Transform to a spin operator
     auto transform = fermion_to_spin::get(options.fermion_to_string);
@@ -129,8 +123,7 @@ public:
 
     // Return the molecular hamiltonian
     return operators::molecular_hamiltonian{
-        spinHamiltonian, std::move(fermionOp), num_electrons, numOrb, energy,
-        energies,        std::move(operators)};
+        spinHamiltonian, std::move(fermionOp), num_electrons, numOrb, energies};
   }
 
   CUDAQ_REGISTER_MOLECULEPACKAGEDRIVER(external_pyscf)

@@ -22,9 +22,10 @@ def test_gas_phase():
                             ccsd=True,
                             verbose=True,
                             cache=False)
-    assert np.isclose(1.058354, data[2], rtol=1e-6)
-    assert data[3] == 4
-    assert data[4] == 6
+    print(data['num_orbitals'], data['num_electrons'])
+    assert np.isclose(1.058354, data['energies']['nuclear_energy'], rtol=1e-6)
+    assert data['num_electrons'] == 4
+    assert data['num_orbitals'] == 6
 
 
 def test_gas_phase_active_space():
@@ -41,9 +42,10 @@ def test_gas_phase_active_space():
                             casscf=True,
                             verbose=True,
                             cache=False)
-    assert np.isclose(-96.32874, data[2], rtol=1e-3)
-    assert data[3] == 6
-    assert data[4] == 6
+    print(data['energies'])
+    assert np.isclose(-96.32874, data['energies']['core_energy'], rtol=1e-3)
+    assert data['num_electrons'] == 6
+    assert data['num_orbitals'] == 6
 
 
 def test_gas_phase_active_space_cudaq():
@@ -61,6 +63,7 @@ def test_gas_phase_active_space_cudaq():
                                                   casscf=True)
 
     print(molecule)
+    print(molecule.energies)
     assert molecule.n_electrons == 6
     assert molecule.n_orbitals == 6 
     assert np.isclose(-107.49999, molecule.energies['hf_energy'], atol=1e-3)
@@ -78,9 +81,10 @@ def test_pyscf_pe():
                            verbose=True,
                            cache=False)
 
-    assert np.isclose(31.23082, data[2], rtol=1e-6)
-    assert data[4] == 16
-    assert data[5] == 12
+    print(data['energies'])
+    assert np.isclose(31.23082, data['energies']['nuclear_energy'], rtol=1e-6)
+    assert data['num_electrons'] == 16
+    assert data['num_orbitals'] == 12
 
 
 def test_pyscf_pe_active_space():
@@ -98,9 +102,10 @@ def test_pyscf_pe_active_space():
                            verbose=True,
                            cache=False)
 
-    assert np.isclose(-101.419971, data[2], rtol=1e-6)
-    assert data[4] == 6
-    assert data[5] == 6
+    print(data['energies'])
+    assert np.isclose(-101.419971, data['energies']['core_energy'], rtol=1e-6)
+    assert data['num_electrons'] == 6
+    assert data['num_orbitals'] == 6
 
 
 def test_pyscf_cppe():

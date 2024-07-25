@@ -50,9 +50,7 @@ struct molecular_hamiltonian {
   operators::fermion_op fermionOperator;
   std::size_t n_electrons;
   std::size_t n_orbitals;
-  double nuclear_repulsion;
   std::unordered_map<std::string, double> energies;
-  std::unordered_map<std::string, operators::fermion_op> operators;
 };
 
 struct molecule_options {

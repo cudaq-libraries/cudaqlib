@@ -92,7 +92,7 @@ class PolarizableEmbeddedGenerator(HamiltonianGenerator):
             print(
                 'WARN: UHF is not implemented yet for PE model in Cudaq. RHF & ROHF are only supported.'
             )
-        
+
         energies = {}
 
         ################################
@@ -127,8 +127,8 @@ class PolarizableEmbeddedGenerator(HamiltonianGenerator):
             print('[Pyscf] Total HF energy with solvent:', mf_pe.e_tot)
             print('[Pyscf] Polarizable embedding energy from HF: ',
                   mf_pe.with_solvent.e)
-        
-        energies['hf_energy'] = mf_pe.e_tot 
+
+        energies['hf_energy'] = mf_pe.e_tot
 
         dm = mf_pe.make_rdm1()
 
@@ -147,7 +147,7 @@ class PolarizableEmbeddedGenerator(HamiltonianGenerator):
                 print('[pyscf] R-MP2 energy with solvent= ', mymp.e_tot)
                 print('[Pyscf] Polarizable embedding energy from MP: ',
                       mymp.with_solvent.e)
-            energies['r-mp2'] = mymp.e_tot 
+            energies['r-mp2'] = mymp.e_tot
             energies['pe-mp2-energy'] = mymp.with_solvent.e
 
             if integrals_natorb or natorb:
@@ -176,7 +176,7 @@ class PolarizableEmbeddedGenerator(HamiltonianGenerator):
                     print(
                         '[pyscf] CASCI energy (using natural orbitals) with solvent= ',
                         mycasci.e_tot)
-                energies['casci-natorb'] = mycasci.e_tot 
+                energies['casci-natorb'] = mycasci.e_tot
 
             else:
                 mycasci = mcscf.CASCI(mf_pe, norb_cas, nele_cas)
@@ -205,7 +205,7 @@ class PolarizableEmbeddedGenerator(HamiltonianGenerator):
                           mycc.e_tot)
                     print('[Pyscf] Polarizable embedding energy from CCSD: ',
                           mycc.with_solvent.e)
-                
+
                 energies['ccsd-mo'] = mycc.e_tot
                 energies['pe-ccsd-energy'] = mycc.with_solvent.e
 
@@ -292,25 +292,18 @@ class PolarizableEmbeddedGenerator(HamiltonianGenerator):
             obi, tbi, e_nn = self.generate_molecular_spin_ham_restricted(
                 h1e, h2e, nuclear_repulsion)
 
-            # Dump obi and tbi to binary file.
-            if cache:
-                obi.astype(complex).tofile(f'{filename}_one_body.dat')
-                tbi.astype(complex).tofile(f'{filename}_two_body.dat')
-
             # Compute the PE contribution to the Hamiltonian
             dm = mf_pe.make_rdm1()
 
             mype = PolEmbed(mol, potfile)
             E_pe, V_pe, V_es, V_ind = mype.get_pe_contribution(dm)
-            energies['pe-energy'] = E_pe 
+            energies['pe-energy'] = E_pe
 
             # convert V_pe from atomic orbital to molecular orbital representation
             V_pe_mo = reduce(np.dot, (mf_pe.mo_coeff.T, V_pe, mf_pe.mo_coeff))
 
             obi_pe = self.generate_pe_spin_ham_restricted(V_pe_mo)
-            if cache:
-                obi_pe.astype(complex).tofile(f'{filename}_pe_one_body.dat')
-                # V_pe_mo.asttype(complex).tofile(f'{filename}_v_pe_mo.dat')
+            energies['nuclear_energy'] = e_nn
 
             metadata = {
                 'num_electrons': nelec,
@@ -318,17 +311,20 @@ class PolarizableEmbeddedGenerator(HamiltonianGenerator):
                 'nuclear_energy': e_nn,
                 'hf_energy': mf_pe.e_tot,
                 'energies': energies,
-                'operators': {
-                    f'{filename}_pe_one_body.dat': 'pe_obi',
-                    f'{filename}_one_body.dat': 'obi',
-                    f'{filename}_two_body.dat': 'tbi'
+                'hpq': {
+                    'data': [(x.real, x.imag)
+                             for x in obi.astype(complex).flatten().tolist()]
+                },
+                'hpqrs': {
+                    'data': [(x.real, x.imag)
+                             for x in tbi.astype(complex).flatten().tolist()]
                 }
             }
             if cache:
                 with open(f'{filename}_metadata.json', 'w') as f:
                     json.dump(metadata, f)
 
-            return (obi, tbi, nuclear_repulsion, obi_pe, nelec, norb)
+            return metadata
 
         if integrals_natorb:
             mc = mcscf.CASCI(mf_pe, norb_cas, nele_cas)
@@ -339,11 +335,6 @@ class PolarizableEmbeddedGenerator(HamiltonianGenerator):
 
             obi, tbi, core_energy = self.generate_molecular_spin_ham_restricted(
                 h1e_cas, h2e_cas, ecore)
-
-            # Dump obi and tbi to binary file.
-            if cache:
-                obi.astype(complex).tofile(f'{filename}_one_body.dat')
-                tbi.astype(complex).tofile(f'{filename}_two_body.dat')
 
             if casci:
 
@@ -360,12 +351,9 @@ class PolarizableEmbeddedGenerator(HamiltonianGenerator):
                                    mycasci.ncore:mycasci.ncore + mycasci.ncas]
 
                 obi_pe = self.generate_pe_spin_ham_restricted(V_pe_cas)
-                if cache:
-                    obi_pe.astype(complex).tofile(
-                        f'{filename}_pe_one_body.dat')
 
-                energies['core-energy'] = ecore
-                energies['pe-energy'] = E_pe 
+                energies['core_energy'] = ecore
+                energies['pe-energy'] = E_pe
                 metadata = {
                     'num_electrons': nele_cas,
                     'num_orbitals': norb_cas,
@@ -373,17 +361,22 @@ class PolarizableEmbeddedGenerator(HamiltonianGenerator):
                     'pe_energy': E_pe,
                     'hf_energy': mf_pe.e_tot,
                     'energies': energies,
-                    'operators': {
-                        f'{filename}_pe_one_body.dat': 'pe_obi',
-                        f'{filename}_one_body.dat': 'obi',
-                        f'{filename}_two_body.dat': 'tbi'
+                    'hpq': {
+                        'data':
+                        [(x.real, x.imag)
+                         for x in obi.astype(complex).flatten().tolist()]
+                    },
+                    'hpqrs': {
+                        'data':
+                        [(x.real, x.imag)
+                         for x in tbi.astype(complex).flatten().tolist()]
                     }
                 }
                 if cache:
                     with open(f'{filename}_metadata.json', 'w') as f:
                         json.dump(metadata, f)
 
-                return (obi, tbi, ecore, obi_pe, nele_cas, norb_cas)
+                return metadata
 
             raise ValueError('You should use casci=True.')
 
@@ -410,12 +403,8 @@ class PolarizableEmbeddedGenerator(HamiltonianGenerator):
             V_pe_cas = V_pe_mo[mycas.ncore:mycas.ncore + mycas.ncas,
                                mycas.ncore:mycas.ncore + mycas.ncas]
             obi_pe = self.generate_pe_spin_ham_restricted(V_pe_cas)
-            if cache:
-                obi_pe.astype(complex).tofile(f'{filename}_pe_one_body.dat')
-                obi.astype(complex).tofile(f'{filename}_one_body.dat')
-                tbi.astype(complex).tofile(f'{filename}_two_body.dat')
-            energies ['pe-energy'] = E_pe 
-            energies['core-energy'] = ecore 
+            energies['pe-energy'] = E_pe
+            energies['core_energy'] = ecore
             metadata = {
                 'num_electrons': nele_cas,
                 'num_orbitals': norb_cas,
@@ -423,17 +412,20 @@ class PolarizableEmbeddedGenerator(HamiltonianGenerator):
                 'pe_energy': E_pe,
                 'hf_energy': mf_pe.e_tot,
                 'energies': energies,
-                'operators': {
-                    f'{filename}_pe_one_body.dat': 'pe_obi',
-                    f'{filename}_one_body.dat': 'obi',
-                    f'{filename}_two_body.dat': 'tbi'
+                'hpq': {
+                    'data': [(x.real, x.imag)
+                             for x in obi.astype(complex).flatten().tolist()]
+                },
+                'hpqrs': {
+                    'data': [(x.real, x.imag)
+                             for x in tbi.astype(complex).flatten().tolist()]
                 }
             }
             if cache:
                 with open(f'{filename}_metadata.json', 'w') as f:
                     json.dump(metadata, f)
 
-            return (obi, tbi, ecore, obi_pe, nele_cas, norb_cas)
+            return metadata
 
         mc = mcscf.CASCI(mf_pe, norb_cas, nele_cas)
         h1e_cas, ecore = mc.get_h1eff(mf_pe.mo_coeff)
@@ -447,7 +439,6 @@ class PolarizableEmbeddedGenerator(HamiltonianGenerator):
         # Compute the PE contribution to the Hamiltonian
         mype = PolEmbed(mol, potfile)
         E_pe, V_pe, V_es, V_ind = mype.get_pe_contribution(dm)
-        print('TESTING HERE, ', V_pe)
 
         #convert from ao to mo
         V_pe_mo = reduce(np.dot, (mf_pe.mo_coeff.T, V_pe, mf_pe.mo_coeff))
@@ -455,15 +446,9 @@ class PolarizableEmbeddedGenerator(HamiltonianGenerator):
         V_pe_cas = V_pe_mo[mc.ncore:mc.ncore + mc.ncas,
                            mc.ncore:mc.ncore + mc.ncas]
         obi_pe = self.generate_pe_spin_ham_restricted(V_pe_cas)
-        if cache:
-            obi.astype(complex).tofile(f'{filename}_one_body.dat')
-            tbi.astype(complex).tofile(f'{filename}_two_body.dat')
-            obi_pe.astype(complex).tofile(f'{filename}_pe_one_body.dat')
-            V_pe.astype(complex).tofile(f'{filename}_vpe.dat')
-            mf_pe.mo_coeff.astype(complex).tofile(f'{filename}_mo_coeff.dat')
 
         energies['pe-energy'] = E_pe
-        energies['core-energy'] = ecore
+        energies['core_energy'] = ecore
         metadata = {
             'num_electrons': nele_cas,
             'num_orbitals': norb_cas,
@@ -471,19 +456,19 @@ class PolarizableEmbeddedGenerator(HamiltonianGenerator):
             'pe_energy': E_pe,
             'hf_energy': mf_pe.e_tot,
             'energies': energies,
-            'operators': {
-                f'{filename}_pe_one_body.dat': 'pe_obi',
-                f'{filename}_one_body.dat': 'obi',
-                f'{filename}_two_body.dat': 'tbi',
-                f'{filename}_mo_coeff.dat': 'pe_mo_coeff_obi',
-                f'{filename}_vpe.dat': 'pe_vpe_obi'
+            'hpq': {
+                'data': [(x.real, x.imag)
+                         for x in obi.astype(complex).flatten().tolist()]
+            },
+            'hpqrs': {
+                'data': [(x.real, x.imag)
+                         for x in tbi.astype(complex).flatten().tolist()]
             }
         }
         if cache:
             with open(f'{filename}_metadata.json', 'w') as f:
                 json.dump(metadata, f)
-
-        return (obi, tbi, ecore, obi_pe, nele_cas, norb_cas)
+        return metadata
 
     def generate(self, xyz, basis, **kwargs):
         requiredOptions = ['potfile', 'spin', 'charge']

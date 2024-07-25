@@ -93,7 +93,8 @@ if not args.server_mode:
         k: v
         for (k, v) in vars(args).items() if k not in filterArgs
     }
-    hamiltonianGenerator.generate(args.xyz, args.basis, **filteredArgs)
+    res = hamiltonianGenerator.generate(args.xyz, args.basis, **filteredArgs)
+    print(res)
 
     exit(0)
 
@@ -106,20 +107,8 @@ async def shutdown():
     return Response(status_code=200, content='Server shutting down...')
 
 
-Complex = Annotated[
-    complex,
-    PlainValidator(lambda x: x if isinstance(x, complex) else complex(
-        x.real, x.imag)),
-    PlainSerializer(lambda x: (x.real, x.imag), return_type=tuple)]
-
-
 class IntegralsData(BaseModel):
-    data: List[Complex]
-
-    @classmethod
-    def from_numpy(cls, array: np.ndarray):
-        return cls(data=array.flatten().tolist())
-
+    data: List[List]
 
 
 class MoleculeInput(BaseModel):
@@ -172,11 +161,11 @@ async def create_molecule(molecule: MoleculeInput):
     filteredArgs['cache_data'] = False
     res = hamiltonianGenerator.generate(molecule.xyz, molecule.basis,
                                         **filteredArgs)
-    return Molecule(energies=res[-1]['energies'],
-                    num_orbitals=res[-1]['num_orbitals'],
-                    num_electrons=res[-1]['num_electrons'],
-                    hpq=IntegralsData.from_numpy(res[0]),
-                    hpqrs=IntegralsData.from_numpy(res[1]))
+    return Molecule(energies=res['energies'],
+                    num_orbitals=res['num_orbitals'],
+                    num_electrons=res['num_electrons'],
+                    hpq=IntegralsData(data=res['hpq']['data']),
+                    hpqrs=IntegralsData(data=res['hpqrs']['data']))
 
 
 if __name__ == "__main__":
