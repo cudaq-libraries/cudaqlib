@@ -73,8 +73,14 @@ molecular_hamiltonian create_molecule(const molecular_geometry &geometry,
   if (!MoleculePackageDriver::is_registered(options.driver))
     throw std::runtime_error("invalid molecule package driver (" +
                              options.driver + ")");
-  return MoleculePackageDriver::get(options.driver)
-      ->createMolecule(geometry, basis, spin, charge, options);
+  auto driver = MoleculePackageDriver::get(options.driver);
+
+  if (!driver->is_available()) {
+    if (options.driver.find("REST") != std::string::npos) {
+      driver = MoleculePackageDriver::get("external_pyscf");
+    }
+  }
+  return driver->createMolecule(geometry, basis, spin, charge, options);
 }
 
 void molecule_options::dump() {
@@ -84,10 +90,10 @@ void molecule_options::dump() {
   std::cout << "\tsymmetry: " << symmetry << "\n";
   std::cout << "\tcycles: " << cycles << "\n";
   std::cout << "\tinitguess: " << initguess << "\n";
-  std::cout << "\tnele_cas: " << (nele_cas.has_value() ? nele_cas.value()
-                                                      : -1) << "\n";
-  std::cout << "\tnorb_cas: " << (norb_cas.has_value() ? norb_cas.value()
-                                                      : -1) << "\n";
+  std::cout << "\tnele_cas: " << (nele_cas.has_value() ? nele_cas.value() : -1)
+            << "\n";
+  std::cout << "\tnorb_cas: " << (norb_cas.has_value() ? norb_cas.value() : -1)
+            << "\n";
   std::cout << "\tUR: " << std::boolalpha << UR << "\n";
   std::cout << "\tMP2: " << std::boolalpha << MP2 << "\n";
   std::cout << "\tnatorb: " << std::boolalpha << natorb << "\n";
@@ -101,4 +107,7 @@ void molecule_options::dump() {
   std::cout << "\tintegrals_natorb: " << std::boolalpha << integrals_natorb
             << "\n]\n";
 }
+
+spin_op one_particle_op(std::size_t p, std::size_t q) { return spin_op(); }
+
 } // namespace cudaq::operators

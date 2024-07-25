@@ -6,7 +6,7 @@
  * the terms of the Apache License 2.0 which accompanies this distribution.    *
  ******************************************************************************/
 
-#include "json.hpp"
+#include "nlohmann/json.hpp"
 
 #include "cudaqlib/operators/chemistry/MoleculePackageDriver.h"
 #include "cudaqlib/operators/fermion/fermion_to_spin.h"
@@ -45,10 +45,10 @@ public:
     std::string oneBodyFile = outFileName + "_one_body.dat";
     std::string twoBodyFile = outFileName + "_two_body.dat";
     std::string metadataFile = outFileName + "_metadata.json";
-    std::filesystem::path libPath{cudaqlib::__internal__::getCUDAQLibraryPath()};
+    std::filesystem::path libPath{
+        cudaqlib::__internal__::getCUDAQLibraryPath()};
     auto cudaqLibPath = libPath.parent_path();
-    auto cudaqPySCFTool =
-        cudaqLibPath.parent_path() / "bin" / "cudaq-pyscf.py";
+    auto cudaqPySCFTool = cudaqLibPath.parent_path() / "bin" / "cudaq-pyscf.py";
 
     // Convert the geometry to an XYZ string
     for (auto &atom : geometry)
@@ -58,11 +58,12 @@ public:
     xyzFileStr = "\"" + xyzFileStr + "\"";
 
     std::string argString = fmt::format(
-        "{} --type {} --xyz {} --charge {} --spin {} --basis {} --out-file-name {} "
+        "{} --type {} --xyz {} --charge {} --spin {} --basis {} "
+        "--out-file-name {} "
         "{} --memory {} {} --cycles {} --initguess {} {} {} {} {} {} {} {} {} "
         "{} {} {}",
-        cudaqPySCFTool.string(), options.type, xyzFileStr, charge, spin, basis, outFileName,
-        options.verbose ? "--verbose" : "", options.memory,
+        cudaqPySCFTool.string(), options.type, xyzFileStr, charge, spin, basis,
+        outFileName, options.verbose ? "--verbose" : "", options.memory,
         options.symmetry ? "--symmetry" : "", options.cycles, options.initguess,
         options.UR ? "--UR" : "",
         options.nele_cas.has_value()
@@ -87,22 +88,40 @@ public:
     // Import all the data we need from the execution.
     std::ifstream f(metadataFile);
     auto metadata = nlohmann::json::parse(f);
-    metadata.dump();
-    auto oneVec = readInData(oneBodyFile);
-    auto twoVec = readInData(twoBodyFile);
-    std::remove(metadataFile.c_str());
-    std::remove(oneBodyFile.c_str());
-    std::remove(twoBodyFile.c_str());
 
     // Get the energy, num orbitals, and num qubits
-    auto energy = metadata["nuclear_energy"].get<double>();
+    std::unordered_map<std::string, double> energies;
+    for (auto &[energyName, E] : metadata["energies"].items())
+      energies.insert({energyName, E});
+
+    double energy = 0.0;
+    if (energies.contains("nuclear_energy"))
+      energy = energies["nuclear_energy"];
+    else if (energies.contains("core_energy"))
+      energy = energies["core_energy"];
+
     auto numOrb = metadata["num_orbitals"].get<std::size_t>();
     auto numQubits = 2 * numOrb;
+    auto num_electrons = metadata["num_electrons"].get<std::size_t>();
 
-    // Create the fermion operator
+    // Get the operators
     fermion_op fermionOp(numQubits, energy);
-    fermionOp.hpq.set_data(oneVec);
-    fermionOp.hpqrs.set_data(twoVec);
+    std::unordered_map<std::string, fermion_op> operators;
+    for (auto &[opFileName, opType] : metadata["operators"].items()) {
+      auto type = opType.get<std::string>();
+      if (type == "obi")
+        fermionOp.hpq.add(readInData(opFileName));
+      else if (type == "tbi")
+        fermionOp.hpqrs.add(readInData(opFileName));
+
+      auto res = operators.insert({type, fermion_op(numQubits, energy)});
+      if (type.find("obi") != std::string::npos)
+        res.first->second.hpq.set_data(readInData(opFileName));
+      else
+        res.first->second.hpqrs.set_data(readInData(opFileName));
+
+      std::remove(opFileName.c_str());
+    }
 
     // Transform to a spin operator
     auto transform = fermion_to_spin::get(options.fermion_to_string);
@@ -110,12 +129,8 @@ public:
 
     // Return the molecular hamiltonian
     return operators::molecular_hamiltonian{
-        spinHamiltonian,
-        std::move(fermionOp),
-        metadata["num_electrons"].get<std::size_t>(),
-        numOrb,
-        energy,
-        metadata["hf_energy"].get<double>()};
+        spinHamiltonian, std::move(fermionOp), num_electrons, numOrb, energy,
+        energies,        std::move(operators)};
   }
 
   CUDAQ_REGISTER_MOLECULEPACKAGEDRIVER(external_pyscf)

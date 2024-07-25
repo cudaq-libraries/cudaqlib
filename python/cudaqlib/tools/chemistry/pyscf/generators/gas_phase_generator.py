@@ -11,7 +11,7 @@ import json
 from functools import reduce
 try:
     from pyscf import gto, scf, cc, ao2mo, mp, mcscf, solvent, fci
-except ValueError:
+except RuntimeError:
     print(
         'PySCF should be installed to use cudaq-pyscf tool. Use pip install pyscf'
     )
@@ -120,14 +120,15 @@ class GasPhaseGenerator(HamiltonianGenerator):
         # Initialize the molecule
         ################################
         filename = xyz.split('.')[0] if outFileName == None else outFileName
+        energies = {}
 
         if (nele_cas is None) and (norb_cas is not None):
-            raise ValueError(
+            raise RuntimeError(
                 "WARN: nele_cas is None and norb_cas is not None. nele_cas and norb_cas should be either both None\
                         or have values")
 
         if (nele_cas is not None) and (norb_cas is None):
-            raise ValueError(
+            raise RuntimeError(
                 "WARN: nele_cas is not None and norb_cas is None. nele_cas and norb_cas should be either both None\
                         or have values")
 
@@ -135,7 +136,7 @@ class GasPhaseGenerator(HamiltonianGenerator):
         # To add (coming soon)
 
         if UR and nele_cas is None:
-            raise ValueError(
+            raise RuntimeError(
                 "WARN: Unrestricted spin calculation for the full space is not supported yet on Cudaq.\
                         Only active space is currently supported for the unrestricted spin calculations."
             )
@@ -181,9 +182,9 @@ class GasPhaseGenerator(HamiltonianGenerator):
                 print('[pyscf] Total number of orbitals = ', norb)
 
         nelec = mol.nelectron
+        energies['hf_energy'] = myhf.e_tot
         if verbose:
             print('[pyscf] Total number of electrons = ', nelec)
-        if verbose:
             print('[pyscf] HF energy = ', myhf.e_tot)
 
         ##########################
@@ -209,13 +210,10 @@ class GasPhaseGenerator(HamiltonianGenerator):
                         print(
                             '[pyscf] Natural orbital (alpha orbitals) occupation number from UR-MP2: '
                         )
-                    if verbose:
                         print(noon_a)
-                    if verbose:
                         print(
                             '[pyscf] Natural orbital (beta orbitals) occupation number from UR-MP2: '
                         )
-                    if verbose:
                         print(noon_b)
 
                     natorbs = np.zeros(np.shape(myhf.mo_coeff))
@@ -226,7 +224,7 @@ class GasPhaseGenerator(HamiltonianGenerator):
 
             else:
                 if spin != 0:
-                    raise ValueError("WARN: ROMP2 is unvailable in pyscf.")
+                    raise RuntimeError("WARN: ROMP2 is unvailable in pyscf.")
                 else:
                     mymp = mp.MP2(myhf)
                     mp_ecorr, mp_t2 = mymp.kernel()
@@ -241,7 +239,6 @@ class GasPhaseGenerator(HamiltonianGenerator):
                             print(
                                 '[pyscf] Natural orbital occupation number from R-MP2: '
                             )
-                        if verbose:
                             print(noons)
 
         #######################################
@@ -258,6 +255,7 @@ class GasPhaseGenerator(HamiltonianGenerator):
                         print(
                             '[pyscf] UR-CASCI energy using natural orbitals= ',
                             mycasci.e_tot)
+                    energies['UR-CASCI'] = mycasci.e_tot 
                 else:
                     mycasci_mo = mcscf.UCASCI(myhf, norb_cas, nele_cas)
                     mycasci_mo.kernel()
@@ -265,6 +263,7 @@ class GasPhaseGenerator(HamiltonianGenerator):
                         print(
                             '[pyscf] UR-CASCI energy using molecular orbitals= ',
                             mycasci_mo.e_tot)
+                    energies['UR-CASCI'] = mycasci_mo.e_tot 
 
             else:
                 if nele_cas is None:
@@ -272,6 +271,7 @@ class GasPhaseGenerator(HamiltonianGenerator):
                     result = myfci.kernel()
                     if verbose:
                         print('[pyscf] FCI energy = ', result[0])
+                    energies['fci_energy'] = result[0]
 
                 else:
                     if natorb and (spin == 0):
@@ -282,8 +282,10 @@ class GasPhaseGenerator(HamiltonianGenerator):
                                 '[pyscf] R-CASCI energy using natural orbitals= ',
                                 mycasci.e_tot)
 
+                        energies['R-CASCI'] = mycasci.e_tot 
+
                     elif natorb and (spin != 0):
-                        raise ValueError(
+                        raise RuntimeError(
                             "WARN: Natural orbitals cannot be computed. ROMP2 is unvailable in pyscf."
                         )
 
@@ -294,6 +296,9 @@ class GasPhaseGenerator(HamiltonianGenerator):
                             print(
                                 '[pyscf] R-CASCI energy using molecular orbitals= ',
                                 mycasci_mo.e_tot)
+
+                        energies['R-CASCI'] = mycasci_mo.e_tot 
+
 
         ########################
         # CCSD
@@ -328,6 +333,9 @@ class GasPhaseGenerator(HamiltonianGenerator):
                             '[pyscf] UR-CCSD energy of the active space using molecular orbitals= ',
                             mycc.e_tot)
 
+                energies['UR-CCSD'] = mycc.e_tot 
+
+
             else:
                 if nele_cas is None:
                     mycc = cc.CCSD(myhf)
@@ -341,8 +349,8 @@ class GasPhaseGenerator(HamiltonianGenerator):
                     frozen = []
                     frozen += [y for y in range(0, mc.ncore)]
                     frozen += [
-                        y for y in range(mc.ncore +
-                                         norb_cas, len(myhf.mo_coeff))
+                        y
+                        for y in range(mc.ncore + norb_cas, len(myhf.mo_coeff))
                     ]
                     if natorb and (spin == 0):
                         mycc = cc.CCSD(myhf, frozen=frozen, mo_coeff=natorbs)
@@ -354,7 +362,7 @@ class GasPhaseGenerator(HamiltonianGenerator):
                                 mycc.e_tot)
 
                     elif natorb and (spin != 0):
-                        raise ValueError(
+                        raise RuntimeError(
                             "WARN: Natural orbitals cannot be computed. ROMP2 is unvailable in pyscf."
                         )
 
@@ -367,12 +375,15 @@ class GasPhaseGenerator(HamiltonianGenerator):
                                 '[pyscf] R-CCSD energy of the active space using molecular orbitals= ',
                                 mycc.e_tot)
 
+                energies['R-CCSD'] = mycc.e_tot 
+
+
         #########################
         # CASSCF
         #########################
         if casscf:
             if nele_cas is None:
-                raise ValueError("WARN: You should define the active space.")
+                raise RuntimeError("WARN: You should define the active space.")
 
             if UR:
                 if natorb:
@@ -404,7 +415,7 @@ class GasPhaseGenerator(HamiltonianGenerator):
                             mycas.e_tot)
 
                 elif natorb and (spin != 0):
-                    raise ValueError(
+                    raise RuntimeError(
                         "WARN: Natural orbitals cannot be computed. ROMP2 is unvailable in pyscf."
                     )
 
@@ -416,6 +427,9 @@ class GasPhaseGenerator(HamiltonianGenerator):
                         print(
                             '[pyscf] R-CASSCF energy using molecular orbitals= ',
                             mycas.e_tot)
+
+            energies['R-CASSCF'] = mycas.e_tot 
+
 
         ###################################
         # CASCI: FCI of the active space
@@ -432,27 +446,30 @@ class GasPhaseGenerator(HamiltonianGenerator):
                                                       nele_cas,
                                                       ecore=ecore)
                 if verbose:
-                    print('[pyscf] UR-CASCI energy using the casscf orbitals= ',
-                          e_fci)
+                    print(
+                        '[pyscf] UR-CASCI energy using the casscf orbitals= ',
+                        e_fci)
 
             else:
                 if natorb and (spin != 0):
-                    raise ValueError(
+                    raise RuntimeError(
                         "WARN: Natural orbitals cannot be computed. ROMP2 is unavailable in pyscf."
                     )
-                else:
-                    h1e_cas, ecore = mycas.get_h1eff()
-                    h2e_cas = mycas.get_h2eff()
+                
+                h1e_cas, ecore = mycas.get_h1eff()
+                h2e_cas = mycas.get_h2eff()
 
-                    e_fci, fcivec = fci.direct_spin1.kernel(h1e_cas,
-                                                            h2e_cas,
-                                                            norb_cas,
-                                                            nele_cas,
-                                                            ecore=ecore)
-                    if verbose:
-                        print(
-                            '[pyscf] R-CASCI energy using the casscf orbitals= ',
-                            e_fci)
+                e_fci, fcivec = fci.direct_spin1.kernel(h1e_cas,
+                                                        h2e_cas,
+                                                        norb_cas,
+                                                        nele_cas,
+                                                        ecore=ecore)
+                if verbose:
+                    print(
+                        '[pyscf] R-CASCI energy using the casscf orbitals= ',
+                        e_fci)
+            energies['UR-CASCI'] = e_fci 
+
 
         ###################################################################################
         # Computation of one- and two- electron integrals for the active space Hamiltonian
@@ -486,10 +503,11 @@ class GasPhaseGenerator(HamiltonianGenerator):
                                             order='C')
                     h2e_cas[2] = np.asarray(h2e_cas[2].transpose(0, 2, 3, 1),
                                             order='C')
-                    h2e_cas_prime = np.asarray(h2e_cas[1].transpose(2, 0, 1, 3),
+                    h2e_cas_prime = np.asarray(h2e_cas[1].transpose(
+                        2, 0, 1, 3),
                                                order='C')
                 else:
-                    raise ValueError(
+                    raise RuntimeError(
                         "WARN: You need to run casscf. Use casscf=True.")
 
             else:
@@ -536,12 +554,14 @@ class GasPhaseGenerator(HamiltonianGenerator):
                 # molecular electron integrals
                 obi, tbi, e_nn = self.generate_molecular_spin_ham_restricted(
                     h1e, h2e, nuclear_repulsion)
+                energies['nuclear_energy'] = e_nn 
 
             else:
 
                 if integrals_natorb:
                     if spin != 0:
-                        raise ValueError("WARN: ROMP2 is unvailable in pyscf.")
+                        raise RuntimeError(
+                            "WARN: ROMP2 is unvailable in pyscf.")
                     else:
                         mc = mcscf.CASCI(myhf, norb_cas, nele_cas)
                         h1e_cas, ecore = mc.get_h1eff(natorbs)
@@ -558,7 +578,7 @@ class GasPhaseGenerator(HamiltonianGenerator):
                         h2e_cas = np.asarray(h2e_cas.transpose(0, 2, 3, 1),
                                              order='C')
                     else:
-                        raise ValueError(
+                        raise RuntimeError(
                             "WARN: You need to run casscf. Use casscf=True.")
 
                 else:
@@ -573,6 +593,7 @@ class GasPhaseGenerator(HamiltonianGenerator):
                 # molecular electron integrals
                 obi, tbi, core_energy = self.generate_molecular_spin_ham_restricted(
                     h1e_cas, h2e_cas, ecore)
+                energies['core_energy'] = ecore
 
         # Dump obi and tbi to binary file.
         if cache_data:
@@ -581,30 +602,26 @@ class GasPhaseGenerator(HamiltonianGenerator):
 
         ######################################################
         # Dump energies / etc to a metadata file
-        if nele_cas is None:
-            if cache_data:
-                metadata = {
-                    'num_electrons': nelec,
-                    'num_orbitals': norb,
-                    'nuclear_energy': e_nn,
-                    'hf_energy': myhf.e_tot
+        metadata = {}
+        if cache_data:
+            metadata = {
+                'num_electrons': nelec if nele_cas == None else nele_cas,
+                'num_orbitals': norb if nele_cas == None else norb_cas,
+                'hf_energy': myhf.e_tot,
+                'energies': energies,
+                'operators': {
+                    f'{filename}_one_body.dat': 'obi',
+                    f'{filename}_two_body.dat': 'tbi'
                 }
-                with open(f'{filename}_metadata.json', 'w') as f:
-                    json.dump(metadata, f)
+            }
 
-            return (obi, tbi, e_nn, nelec, norb)
+            with open(f'{filename}_metadata.json', 'w') as f:
+                json.dump(metadata, f)
+        
+        if nele_cas is None:    
+            return (obi, tbi, e_nn, nelec, norb, metadata)
 
-        else:
-            if cache_data:
-                metadata = {
-                    'num_electrons': nele_cas,
-                    'num_orbitals': norb_cas,
-                    'nuclear_energy': ecore,
-                    'hf_energy': myhf.e_tot
-                }
-                with open(f'{filename}_metadata.json', 'w') as f:
-                    json.dump(metadata, f)
-            return (obi, tbi, ecore, nele_cas, norb_cas)
+        return (obi, tbi, ecore, nele_cas, norb_cas, metadata)
 
     def generate(self, xyz, basis, **kwargs):
         if xyz == None:
@@ -644,8 +661,8 @@ class GasPhaseGenerator(HamiltonianGenerator):
             'out_file_name'] if 'out_file_name' in kwargs else None
         return self.get_spin_hamiltonian(xyz, spin, charge, basis, symmetry,
                                          memory, cycles, initguess, UR,
-                                         nele_cas, norb_cas, MP2, natorb, casci,
-                                         ccsd, casscf, integrals_natorb,
+                                         nele_cas, norb_cas, MP2, natorb,
+                                         casci, ccsd, casscf, integrals_natorb,
                                          integrals_casscf, verbose, cache_data,
                                          outfilename)
 

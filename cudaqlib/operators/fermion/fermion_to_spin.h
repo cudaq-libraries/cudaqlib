@@ -8,8 +8,8 @@
 
 #pragma once
 
-#include "cudaqlib/utils/extension_point.h"
 #include "cudaq/spin_op.h"
+#include "cudaqlib/utils/extension_point.h"
 #include "fermion_op.h"
 
 namespace cudaq::operators {
@@ -22,11 +22,13 @@ public:
   /// @brief Given a fermionic representation of an operator
   /// generate an equivalent operator on spins.
   virtual spin_op generate(const fermion_op &fermionOp) = 0;
+  virtual ~fermion_to_spin() {}
+  
 };
 
 CUDAQ_DEFINE_EXTENSION_IMPL(fermion_to_spin)
 
-#define CUDAQ_REGISTER_FERMION_TO_SPIN(TYPE)                                  \
+#define CUDAQ_REGISTER_FERMION_TO_SPIN(TYPE)                                   \
   static inline const std::string class_identifier = #TYPE;                    \
   static std::unique_ptr<fermion_to_spin> create() {                           \
     return std::make_unique<TYPE>();                                           \

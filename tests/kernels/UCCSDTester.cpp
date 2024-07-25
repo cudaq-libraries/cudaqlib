@@ -287,7 +287,7 @@ TEST(UCCSDTester, checkUCCSDAnsatz) {
   auto numQubits = molecule.n_orbitals * 2;
 
   // EXPECT_NEAR(molecule.fci_energy, -1.137, 1e-3);
-  EXPECT_NEAR(molecule.hf_energy, -1.1163255644, 1e-3);
+  EXPECT_NEAR(molecule.energies["hf_energy"], -1.1163255644, 1e-3);
   EXPECT_EQ(numElectrons, 2);
   EXPECT_EQ(numQubits, 4);
 

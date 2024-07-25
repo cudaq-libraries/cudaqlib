@@ -25,6 +25,7 @@ public:
                  int spin, int charge,
                  molecule_options options = molecule_options()) = 0;
 
+  virtual bool is_available() const { return true; }
   /// Virtual destructor needed when deleting an instance of a derived class
   /// via a pointer to the base class.
   virtual ~MoleculePackageDriver(){};

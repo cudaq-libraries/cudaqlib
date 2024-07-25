@@ -63,7 +63,7 @@ def test_gas_phase_active_space_cudaq():
     print(molecule)
     assert molecule.n_electrons == 6
     assert molecule.n_orbitals == 6 
-    assert np.isclose(-107.49999, molecule.hf_energy, atol=1e-3)
+    assert np.isclose(-107.49999, molecule.energies['hf_energy'], atol=1e-3)
 
 
 def test_pyscf_pe():

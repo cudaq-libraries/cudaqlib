@@ -16,21 +16,22 @@ add_library(${LIBRARY_NAME} SHARED
   fermion/transformations/jordan_wigner.cpp
   # chemistry package drivers
   chemistry/drivers/pyscf/ExternalPySCFDriver.cpp
+  chemistry/drivers/pyscf/RESTPySCFDriver.cpp
   )
 
-
-target_link_libraries(${LIBRARY_NAME} PUBLIC cudaq::cudaq)
 target_include_directories(${LIBRARY_NAME} 
   PRIVATE
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}> 
     $<BUILD_INTERFACE:${CUDAQ_INCLUDE_DIR}> 
-    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/tpls/json>
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/tpls/json/include>
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/tpls/cppitertools/cppitertools>
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/tpls/xtl/include>
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/tpls/xtensor/include>
   PUBLIC
     $<INSTALL_INTERFACE:${CUDAQ_INCLUDE_DIR}>
     $<INSTALL_INTERFACE:include>)
+
+target_link_libraries(${LIBRARY_NAME} PUBLIC cudaq::cudaq cudaq::cudaq-common)
 
 install(
     TARGETS ${LIBRARY_NAME}

@@ -51,12 +51,12 @@ struct molecular_hamiltonian {
   std::size_t n_electrons;
   std::size_t n_orbitals;
   double nuclear_repulsion;
-  double hf_energy;
-  double fci_energy;
+  std::unordered_map<std::string, double> energies;
+  std::unordered_map<std::string, operators::fermion_op> operators;
 };
 
 struct molecule_options {
-  std::string driver = "external_pyscf";
+  std::string driver = "RESTPySCFDriver";
   std::string fermion_to_string = "jordan_wigner";
   std::string type = "gas_phase";
   bool symmetry = false;
@@ -84,5 +84,7 @@ molecular_hamiltonian
 create_molecule(const molecular_geometry &geometry, const std::string &basis,
                 int spin, int charge,
                 molecule_options options = molecule_options());
+
+spin_op one_particle_op(std::size_t p, std::size_t q);
 
 } // namespace cudaq::operators

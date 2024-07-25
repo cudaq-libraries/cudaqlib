@@ -92,6 +92,8 @@ class PolarizableEmbeddedGenerator(HamiltonianGenerator):
             print(
                 'WARN: UHF is not implemented yet for PE model in Cudaq. RHF & ROHF are only supported.'
             )
+        
+        energies = {}
 
         ################################
         # Initialize the molecule
@@ -122,11 +124,11 @@ class PolarizableEmbeddedGenerator(HamiltonianGenerator):
         norb = mf_pe.mo_coeff.shape[1]
         if verbose:
             print('[Pyscf] Total number of orbitals = ', norb)
-        if verbose:
             print('[Pyscf] Total HF energy with solvent:', mf_pe.e_tot)
-        if verbose:
             print('[Pyscf] Polarizable embedding energy from HF: ',
                   mf_pe.with_solvent.e)
+        
+        energies['hf_energy'] = mf_pe.e_tot 
 
         dm = mf_pe.make_rdm1()
 
@@ -136,26 +138,27 @@ class PolarizableEmbeddedGenerator(HamiltonianGenerator):
         if MP2:
 
             if spin != 0:
-                raise ValueError("WARN: ROMP2 is unvailable in pyscf.")
-            else:
-                mymp = mp.MP2(mf_pe)
-                mymp = solvent.PE(mymp, potfile)
-                mymp.run()
-                if verbose:
-                    print('[pyscf] R-MP2 energy with solvent= ', mymp.e_tot)
-                if verbose:
-                    print('[Pyscf] Polarizable embedding energy from MP: ',
-                          mymp.with_solvent.e)
+                raise RuntimeError("WARN: ROMP2 is unvailable in pyscf.")
 
-                if integrals_natorb or natorb:
-                    # Compute natural orbitals
-                    noons, natorbs = mcscf.addons.make_natural_orbitals(mymp)
-                    if verbose:
-                        print(
-                            '[Pyscf] Natural orbital occupation number from R-MP2: '
-                        )
-                    if verbose:
-                        print(noons)
+            mymp = mp.MP2(mf_pe)
+            mymp = solvent.PE(mymp, potfile)
+            mymp.run()
+            if verbose:
+                print('[pyscf] R-MP2 energy with solvent= ', mymp.e_tot)
+                print('[Pyscf] Polarizable embedding energy from MP: ',
+                      mymp.with_solvent.e)
+            energies['r-mp2'] = mymp.e_tot 
+            energies['pe-mp2-energy'] = mymp.with_solvent.e
+
+            if integrals_natorb or natorb:
+                # Compute natural orbitals
+                noons, natorbs = mcscf.addons.make_natural_orbitals(mymp)
+                if verbose:
+                    print(
+                        '[Pyscf] Natural orbital occupation number from R-MP2: '
+                    )
+                if verbose:
+                    print(noons)
 
         #################
         # CASCI
@@ -163,36 +166,30 @@ class PolarizableEmbeddedGenerator(HamiltonianGenerator):
         if casci:
 
             if nele_cas is None:
+                raise RuntimeError('[Pyscf] FCI with PE is not supported.')
 
-                #myfci=fci.FCI(mf_pe)
-                #myfci=solvent.PE(myfci, args.potfile,dm)
-                #myfci.run()
-                #if verbose: print('[pyscf] FCI energy with solvent= ', myfci.e_tot)
-                #if verbose: print('[Pyscf] Polarizable embedding energy from FCI: ', myfci.with_solvent.e)
-                print('[Pyscf] FCI with PE is not supported.')
+            if natorb and (spin == 0):
+                mycasci = mcscf.CASCI(mf_pe, norb_cas, nele_cas)
+                mycasci = solvent.PE(mycasci, potfile)
+                mycasci.run(natorbs)
+                if verbose:
+                    print(
+                        '[pyscf] CASCI energy (using natural orbitals) with solvent= ',
+                        mycasci.e_tot)
+                energies['casci-natorb'] = mycasci.e_tot 
 
             else:
-                if natorb and (spin == 0):
-                    mycasci = mcscf.CASCI(mf_pe, norb_cas, nele_cas)
-                    mycasci = solvent.PE(mycasci, potfile)
-                    mycasci.run(natorbs)
-                    if verbose:
-                        print(
-                            '[pyscf] CASCI energy (using natural orbitals) with solvent= ',
-                            mycasci.e_tot)
-
-                else:
-                    mycasci = mcscf.CASCI(mf_pe, norb_cas, nele_cas)
-                    mycasci = solvent.PE(mycasci, potfile)
-                    mycasci.run()
-                    if verbose:
-                        print(
-                            '[pyscf] CASCI energy (using molecular orbitals) with solvent= ',
-                            mycasci.e_tot)
-                    if verbose:
-                        print(
-                            '[Pyscf] Polarizable embedding energy from CASCI: ',
-                            mycasci.with_solvent.e)
+                mycasci = mcscf.CASCI(mf_pe, norb_cas, nele_cas)
+                mycasci = solvent.PE(mycasci, potfile)
+                mycasci.run()
+                if verbose:
+                    print(
+                        '[pyscf] CASCI energy (using molecular orbitals) with solvent= ',
+                        mycasci.e_tot)
+                    print('[Pyscf] Polarizable embedding energy from CASCI: ',
+                          mycasci.with_solvent.e)
+                energies['casci-mo'] = mycasci.e_tot
+                energies['pe-casci-energy'] = mycasci.with_solvent.e
 
         #################
         ## CCSD
@@ -206,9 +203,11 @@ class PolarizableEmbeddedGenerator(HamiltonianGenerator):
                 if verbose:
                     print('[Pyscf] Total CCSD energy with solvent: ',
                           mycc.e_tot)
-                if verbose:
                     print('[Pyscf] Polarizable embedding energy from CCSD: ',
                           mycc.with_solvent.e)
+                
+                energies['ccsd-mo'] = mycc.e_tot
+                energies['pe-ccsd-energy'] = mycc.with_solvent.e
 
             else:
                 mc = mcscf.CASCI(mf_pe, norb_cas, nele_cas)
@@ -226,6 +225,7 @@ class PolarizableEmbeddedGenerator(HamiltonianGenerator):
                         print(
                             '[pyscf] R-CCSD energy of the active space (using natural orbitals) with solvent= ',
                             mycc.e_tot)
+                    energies['r-ccsd-natorb'] = mycc.e_tot
                 else:
                     mycc = cc.CCSD(mf_pe, frozen=frozen)
                     mycc = solvent.PE(mycc, potfile)
@@ -234,10 +234,12 @@ class PolarizableEmbeddedGenerator(HamiltonianGenerator):
                         print(
                             '[pyscf] CCSD energy of the active space (using molecular orbitals) with solvent= ',
                             mycc.e_tot)
-                    if verbose:
                         print(
                             '[Pyscf] Polarizable embedding energy from CCSD: ',
                             mycc.with_solvent.e)
+                    energies['ccsd-mo'] = mycc.e_tot
+                    energies['pe-ccsd-energy'] = mycc.with_solvent.e
+
         ############################
         # CASSCF
         ############################
@@ -251,6 +253,7 @@ class PolarizableEmbeddedGenerator(HamiltonianGenerator):
                     print(
                         '[pyscf] CASSCF energy (using natural orbitals) with solvent= ',
                         mycas.e_tot)
+                energies['casscf-natorb'] = mycas.e_tot
 
             else:
                 mycas = mcscf.CASSCF(mf_pe, norb_cas, nele_cas)
@@ -261,6 +264,7 @@ class PolarizableEmbeddedGenerator(HamiltonianGenerator):
                     print(
                         '[pyscf] CASSCF energy (using molecular orbitals) with solvent= ',
                         mycas.e_tot)
+                energies['casscf-mo'] = mycas.e_tot
 
         ###########################################################################
         # Computation of one and two electron integrals for the QC+PE
@@ -298,6 +302,7 @@ class PolarizableEmbeddedGenerator(HamiltonianGenerator):
 
             mype = PolEmbed(mol, potfile)
             E_pe, V_pe, V_es, V_ind = mype.get_pe_contribution(dm)
+            energies['pe-energy'] = E_pe 
 
             # convert V_pe from atomic orbital to molecular orbital representation
             V_pe_mo = reduce(np.dot, (mf_pe.mo_coeff.T, V_pe, mf_pe.mo_coeff))
@@ -305,13 +310,19 @@ class PolarizableEmbeddedGenerator(HamiltonianGenerator):
             obi_pe = self.generate_pe_spin_ham_restricted(V_pe_mo)
             if cache:
                 obi_pe.astype(complex).tofile(f'{filename}_pe_one_body.dat')
+                # V_pe_mo.asttype(complex).tofile(f'{filename}_v_pe_mo.dat')
 
             metadata = {
                 'num_electrons': nelec,
                 'num_orbitals': norb,
                 'nuclear_energy': e_nn,
-                'PE_energy': E_pe,
-                'HF_energy': mf_pe.e_tot
+                'hf_energy': mf_pe.e_tot,
+                'energies': energies,
+                'operators': {
+                    f'{filename}_pe_one_body.dat': 'pe_obi',
+                    f'{filename}_one_body.dat': 'obi',
+                    f'{filename}_two_body.dat': 'tbi'
+                }
             }
             if cache:
                 with open(f'{filename}_metadata.json', 'w') as f:
@@ -319,96 +330,54 @@ class PolarizableEmbeddedGenerator(HamiltonianGenerator):
 
             return (obi, tbi, nuclear_repulsion, obi_pe, nelec, norb)
 
-        else:
-            if integrals_natorb:
-                mc = mcscf.CASCI(mf_pe, norb_cas, nele_cas)
-                h1e_cas, ecore = mc.get_h1eff(natorbs)
-                h2e_cas = mc.get_h2eff(natorbs)
-                h2e_cas = ao2mo.restore('1', h2e_cas, norb_cas)
-                h2e_cas = np.asarray(h2e_cas.transpose(0, 2, 3, 1), order='C')
+        if integrals_natorb:
+            mc = mcscf.CASCI(mf_pe, norb_cas, nele_cas)
+            h1e_cas, ecore = mc.get_h1eff(natorbs)
+            h2e_cas = mc.get_h2eff(natorbs)
+            h2e_cas = ao2mo.restore('1', h2e_cas, norb_cas)
+            h2e_cas = np.asarray(h2e_cas.transpose(0, 2, 3, 1), order='C')
 
-                obi, tbi, core_energy = self.generate_molecular_spin_ham_restricted(
-                    h1e_cas, h2e_cas, ecore)
+            obi, tbi, core_energy = self.generate_molecular_spin_ham_restricted(
+                h1e_cas, h2e_cas, ecore)
 
-                # Dump obi and tbi to binary file.
+            # Dump obi and tbi to binary file.
+            if cache:
+                obi.astype(complex).tofile(f'{filename}_one_body.dat')
+                tbi.astype(complex).tofile(f'{filename}_two_body.dat')
+
+            if casci:
+
+                dm = mcscf.make_rdm1(mycasci)
+                mype = PolEmbed(mol, potfile)
+                E_pe, V_pe, V_es, V_ind = mype.get_pe_contribution(dm)
+
+                #convert from ao to mo
+
+                #V_pe_mo=reduce(np.dot, (mf_pe.mo_coeff.T, V_pe, mf_pe.mo_coeff))
+                V_pe_mo = reduce(np.dot, (natorbs.T, V_pe, natorbs))
+
+                V_pe_cas = V_pe_mo[mycasci.ncore:mycasci.ncore + mycasci.ncas,
+                                   mycasci.ncore:mycasci.ncore + mycasci.ncas]
+
+                obi_pe = self.generate_pe_spin_ham_restricted(V_pe_cas)
                 if cache:
-                    obi.astype(complex).tofile(f'{filename}_one_body.dat')
-                    tbi.astype(complex).tofile(f'{filename}_two_body.dat')
+                    obi_pe.astype(complex).tofile(
+                        f'{filename}_pe_one_body.dat')
 
-                if casci:
-
-                    dm = mcscf.make_rdm1(mycasci)
-                    mype = PolEmbed(mol, potfile)
-                    E_pe, V_pe, V_es, V_ind = mype.get_pe_contribution(dm)
-                    #convert from ao to mo
-
-                    #V_pe_mo=reduce(np.dot, (mf_pe.mo_coeff.T, V_pe, mf_pe.mo_coeff))
-                    V_pe_mo = reduce(np.dot, (natorbs.T, V_pe, natorbs))
-
-                    V_pe_cas = V_pe_mo[mycasci.ncore:mycasci.ncore +
-                                       mycasci.ncas,
-                                       mycasci.ncore:mycasci.ncore +
-                                       mycasci.ncas]
-
-                    obi_pe = self.generate_pe_spin_ham_restricted(V_pe_cas)
-                    if cache:
-                        obi_pe.astype(complex).tofile(
-                            f'{filename}_pe_one_body.dat')
-
-                    metadata = {
-                        'num_electrons': nele_cas,
-                        'num_orbitals': norb_cas,
-                        'core_energy': ecore,
-                        'PE_energy': E_pe,
-                        'HF_energy': mf_pe.e_tot
+                energies['core-energy'] = ecore
+                energies['pe-energy'] = E_pe 
+                metadata = {
+                    'num_electrons': nele_cas,
+                    'num_orbitals': norb_cas,
+                    'core_energy': ecore,
+                    'pe_energy': E_pe,
+                    'hf_energy': mf_pe.e_tot,
+                    'energies': energies,
+                    'operators': {
+                        f'{filename}_pe_one_body.dat': 'pe_obi',
+                        f'{filename}_one_body.dat': 'obi',
+                        f'{filename}_two_body.dat': 'tbi'
                     }
-                    if cache:
-                        with open(f'{filename}_metadata.json', 'w') as f:
-                            json.dump(metadata, f)
-
-                    return (obi, tbi, ecore, obi_pe, nele_cas, norb_cas)
-
-                else:
-                    raise ValueError('You should use casci=True.')
-
-            elif integrals_casscf:
-                if casscf:
-                    h1e_cas, ecore = mycas.get_h1eff()
-                    h2e_cas = mycas.get_h2eff()
-                    h2e_cas = ao2mo.restore('1', h2e_cas, norb_cas)
-                    h2e_cas = np.asarray(h2e_cas.transpose(0, 2, 3, 1),
-                                         order='C')
-                else:
-                    raise ValueError(
-                        "WARN: You need to run casscf. Use casscf=True.")
-                obi, tbi, core_energy = self.generate_molecular_spin_ham_restricted(
-                    h1e_cas, h2e_cas, ecore)
-
-                # Dump obi and tbi to binary file.
-                if cache:
-                    obi.astype(complex).tofile(f'{filename}_one_body.dat')
-                    tbi.astype(complex).tofile(f'{filename}_two_body.dat')
-
-                dm = mcscf.make_rdm1(mycas)
-                # Compute the PE contribution to the Hamiltonian
-                mype = PolEmbed(mol, potfile)
-                E_pe, V_pe, V_es, V_ind = mype.get_pe_contribution(dm)
-                #convert from ao to mo
-                V_pe_mo = reduce(np.dot,
-                                 (mycas.mo_coeff.T, V_pe, mycas.mo_coeff))
-
-                V_pe_cas = V_pe_mo[mycas.ncore:mycas.ncore + mycas.ncas,
-                                   mycas.ncore:mycas.ncore + mycas.ncas]
-                obi_pe = self.generate_pe_spin_ham_restricted(V_pe_cas)
-                if cache:
-                    obi_pe.astype(complex).tofile(f'{filename}_pe_one_body.dat')
-
-                metadata = {
-                    'num_electrons': nele_cas,
-                    'num_orbitals': norb_cas,
-                    'core_energy': ecore,
-                    'PE_energy': E_pe,
-                    'HF_energy': mf_pe.e_tot
                 }
                 if cache:
                     with open(f'{filename}_metadata.json', 'w') as f:
@@ -416,46 +385,105 @@ class PolarizableEmbeddedGenerator(HamiltonianGenerator):
 
                 return (obi, tbi, ecore, obi_pe, nele_cas, norb_cas)
 
-            else:
-                mc = mcscf.CASCI(mf_pe, norb_cas, nele_cas)
-                h1e_cas, ecore = mc.get_h1eff(mf_pe.mo_coeff)
-                h2e_cas = mc.get_h2eff(mf_pe.mo_coeff)
-                h2e_cas = ao2mo.restore('1', h2e_cas, norb_cas)
-                h2e_cas = np.asarray(h2e_cas.transpose(0, 2, 3, 1), order='C')
-                obi, tbi, core_energy = self.generate_molecular_spin_ham_restricted(
-                    h1e_cas, h2e_cas, ecore)
+            raise ValueError('You should use casci=True.')
 
-                # Dump obi and tbi to binary file.
-                if cache:
-                    obi.astype(complex).tofile(f'{filename}_one_body.dat')
-                    tbi.astype(complex).tofile(f'{filename}_two_body.dat')
+        if integrals_casscf:
+            if not casscf:
+                raise RuntimeError(
+                    "WARN: You need to run casscf. Use casscf=True.")
 
-                dm = mf_pe.make_rdm1()
-                # Compute the PE contribution to the Hamiltonian
-                mype = PolEmbed(mol, potfile)
-                E_pe, V_pe, V_es, V_ind = mype.get_pe_contribution(dm)
-                #convert from ao to mo
-                V_pe_mo = reduce(np.dot,
-                                 (mf_pe.mo_coeff.T, V_pe, mf_pe.mo_coeff))
+            h1e_cas, ecore = mycas.get_h1eff()
+            h2e_cas = mycas.get_h2eff()
+            h2e_cas = ao2mo.restore('1', h2e_cas, norb_cas)
+            h2e_cas = np.asarray(h2e_cas.transpose(0, 2, 3, 1), order='C')
 
-                V_pe_cas = V_pe_mo[mc.ncore:mc.ncore + mc.ncas,
-                                   mc.ncore:mc.ncore + mc.ncas]
-                obi_pe = self.generate_pe_spin_ham_restricted(V_pe_cas)
-                if cache:
-                    obi_pe.astype(complex).tofile(f'{filename}_pe_one_body.dat')
+            obi, tbi, core_energy = self.generate_molecular_spin_ham_restricted(
+                h1e_cas, h2e_cas, ecore)
 
-                metadata = {
-                    'num_electrons': nele_cas,
-                    'num_orbitals': norb_cas,
-                    'core_energy': ecore,
-                    'PE_energy': E_pe,
-                    'HF_energy': mf_pe.e_tot
+            dm = mcscf.make_rdm1(mycas)
+            # Compute the PE contribution to the Hamiltonian
+            mype = PolEmbed(mol, potfile)
+            E_pe, V_pe, V_es, V_ind = mype.get_pe_contribution(dm)
+            #convert from ao to mo
+            V_pe_mo = reduce(np.dot, (mycas.mo_coeff.T, V_pe, mycas.mo_coeff))
+
+            V_pe_cas = V_pe_mo[mycas.ncore:mycas.ncore + mycas.ncas,
+                               mycas.ncore:mycas.ncore + mycas.ncas]
+            obi_pe = self.generate_pe_spin_ham_restricted(V_pe_cas)
+            if cache:
+                obi_pe.astype(complex).tofile(f'{filename}_pe_one_body.dat')
+                obi.astype(complex).tofile(f'{filename}_one_body.dat')
+                tbi.astype(complex).tofile(f'{filename}_two_body.dat')
+            energies ['pe-energy'] = E_pe 
+            energies['core-energy'] = ecore 
+            metadata = {
+                'num_electrons': nele_cas,
+                'num_orbitals': norb_cas,
+                'core_energy': ecore,
+                'pe_energy': E_pe,
+                'hf_energy': mf_pe.e_tot,
+                'energies': energies,
+                'operators': {
+                    f'{filename}_pe_one_body.dat': 'pe_obi',
+                    f'{filename}_one_body.dat': 'obi',
+                    f'{filename}_two_body.dat': 'tbi'
                 }
-                if cache:
-                    with open(f'{filename}_metadata.json', 'w') as f:
-                        json.dump(metadata, f)
+            }
+            if cache:
+                with open(f'{filename}_metadata.json', 'w') as f:
+                    json.dump(metadata, f)
 
-                return (obi, tbi, ecore, obi_pe, nele_cas, norb_cas)
+            return (obi, tbi, ecore, obi_pe, nele_cas, norb_cas)
+
+        mc = mcscf.CASCI(mf_pe, norb_cas, nele_cas)
+        h1e_cas, ecore = mc.get_h1eff(mf_pe.mo_coeff)
+        h2e_cas = mc.get_h2eff(mf_pe.mo_coeff)
+        h2e_cas = ao2mo.restore('1', h2e_cas, norb_cas)
+        h2e_cas = np.asarray(h2e_cas.transpose(0, 2, 3, 1), order='C')
+        obi, tbi, core_energy = self.generate_molecular_spin_ham_restricted(
+            h1e_cas, h2e_cas, ecore)
+
+        dm = mf_pe.make_rdm1()
+        # Compute the PE contribution to the Hamiltonian
+        mype = PolEmbed(mol, potfile)
+        E_pe, V_pe, V_es, V_ind = mype.get_pe_contribution(dm)
+        print('TESTING HERE, ', V_pe)
+
+        #convert from ao to mo
+        V_pe_mo = reduce(np.dot, (mf_pe.mo_coeff.T, V_pe, mf_pe.mo_coeff))
+
+        V_pe_cas = V_pe_mo[mc.ncore:mc.ncore + mc.ncas,
+                           mc.ncore:mc.ncore + mc.ncas]
+        obi_pe = self.generate_pe_spin_ham_restricted(V_pe_cas)
+        if cache:
+            obi.astype(complex).tofile(f'{filename}_one_body.dat')
+            tbi.astype(complex).tofile(f'{filename}_two_body.dat')
+            obi_pe.astype(complex).tofile(f'{filename}_pe_one_body.dat')
+            V_pe.astype(complex).tofile(f'{filename}_vpe.dat')
+            mf_pe.mo_coeff.astype(complex).tofile(f'{filename}_mo_coeff.dat')
+
+        energies['pe-energy'] = E_pe
+        energies['core-energy'] = ecore
+        metadata = {
+            'num_electrons': nele_cas,
+            'num_orbitals': norb_cas,
+            'core_energy': ecore,
+            'pe_energy': E_pe,
+            'hf_energy': mf_pe.e_tot,
+            'energies': energies,
+            'operators': {
+                f'{filename}_pe_one_body.dat': 'pe_obi',
+                f'{filename}_one_body.dat': 'obi',
+                f'{filename}_two_body.dat': 'tbi',
+                f'{filename}_mo_coeff.dat': 'pe_mo_coeff_obi',
+                f'{filename}_vpe.dat': 'pe_vpe_obi'
+            }
+        }
+        if cache:
+            with open(f'{filename}_metadata.json', 'w') as f:
+                json.dump(metadata, f)
+
+        return (obi, tbi, ecore, obi_pe, nele_cas, norb_cas)
 
     def generate(self, xyz, basis, **kwargs):
         requiredOptions = ['potfile', 'spin', 'charge']
@@ -489,8 +517,8 @@ class PolarizableEmbeddedGenerator(HamiltonianGenerator):
             'out_file_name'] if 'out_file_name' in kwargs else None
         return self.get_spin_hamiltonian(xyz, potfile, spin, charge, basis,
                                          symmetry, memory, cycles, initguess,
-                                         nele_cas, norb_cas, MP2, natorb, casci,
-                                         ccsd, casscf, integrals_natorb,
+                                         nele_cas, norb_cas, MP2, natorb,
+                                         casci, ccsd, casscf, integrals_natorb,
                                          integrals_casscf, verbose, cache_data,
                                          outfilename)
 

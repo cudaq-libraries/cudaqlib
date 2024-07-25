@@ -19,6 +19,12 @@ one_body_integrals::one_body_integrals(const std::vector<std::size_t> &shape)
       new std::complex<double>[shape[0] * shape[1]]);
 }
 
+void one_body_integrals::add(const std::vector<std::complex<double>> &data) {
+  auto *local = unOwnedData == nullptr ? ownedData.get() : unOwnedData;
+  xt::adapt(local, shape[0] * shape[1], xt::no_ownership(), shape) +=
+      xt::adapt(data.data(), shape[0] * shape[1], xt::no_ownership(), shape);
+}
+
 void one_body_integrals::set_data(
     const std::vector<std::complex<double>> &data) {
   std::complex<double> *ptr = nullptr;
@@ -39,6 +45,14 @@ void one_body_integrals::dump() {
   auto *local = unOwnedData == nullptr ? ownedData.get() : unOwnedData;
   std::cerr << xt::adapt(local, shape[0] * shape[1], xt::no_ownership(), shape)
             << '\n';
+}
+
+void two_body_integrals::add(const std::vector<std::complex<double>> &data) {
+  auto *local = unOwnedData == nullptr ? ownedData.get() : unOwnedData;
+  xt::adapt(local, shape[0] * shape[1] * shape[2] * shape[3],
+            xt::no_ownership(), shape) +=
+      xt::adapt(data.data(), shape[0] * shape[1] * shape[2] * shape[3],
+                xt::no_ownership(), shape);
 }
 
 two_body_integrals::two_body_integrals(const std::vector<std::size_t> &shape)
