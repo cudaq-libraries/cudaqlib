@@ -503,3 +503,11 @@ H -0.4691 -0.7570 0.0
   EXPECT_EQ(molecule.n_electrons, 6);
   EXPECT_EQ(molecule.n_orbitals, 6);
 }
+
+TEST(OperatorsTester, checkOneParticleOp) {
+  auto op = cudaq::operators::one_particle_op(4, 4);
+  op.dump();
+
+  op = cudaq::operators::one_particle_op(2, 4);
+  op.dump();
+}

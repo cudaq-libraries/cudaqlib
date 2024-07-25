@@ -80,6 +80,8 @@ void bindOperators(py::module &mod) {
       .def_readonly("n_electrons", &molecular_hamiltonian::n_electrons)
       .def_readonly("n_orbitals", &molecular_hamiltonian::n_orbitals);
 
+  operators.def("one_particle_op", &one_particle_op, "");
+
   operators.def(
       "create_molecule",
       [](py::list geometry, const std::string basis, int spin, int charge,
