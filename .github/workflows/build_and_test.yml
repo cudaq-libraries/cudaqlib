@@ -34,5 +34,5 @@ jobs:
           --build-arg="repo=${{github.event.pull_request.head.repo.full_name}}" -t cudaqlib-dev:local -f docker/ci/Dockerfile .
 
     - name: Run tests
-      run: docker run --rm cudaqlib-dev:local ctest --output-on-failure --test-dir cudaqlib/build
-      run: docker run --rm cudaqlib-dev:local python3 -m pytest cudaqlib/python/tests -v 
+      run: docker run --rm cudaqlib-dev:local ctest --output-on-failure --test-dir cudaqlib/build \
+           && docker run --rm cudaqlib-dev:local python3 -m pytest cudaqlib/python/tests -v 
