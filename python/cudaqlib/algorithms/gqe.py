@@ -227,6 +227,7 @@ def __internal_run_gqe(temperature_scheduler: TemperatureScheduler,
 def gqe(cost, pool, config=None, **kwargs):
     cfg = get_default_config() if config == None else config
     cfg.vocab_size = len(pool)
+    if 'max_iters' in kwargs: cfg.max_iters = kwargs['max_iters']
     model = Transformer(
         cfg, cost, loss='exp') if 'model' not in kwargs else kwargs['model']
     optimizer = torch.optim.AdamW(
