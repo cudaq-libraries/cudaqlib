@@ -25,6 +25,16 @@ uccsd::generate(const std::unordered_map<std::string, std::any> &config) const {
                              "parameter of type std::size_t.");
   auto numElectrons = getIntLike(iter.value()->second);
 
+  iter = findIter({"operatorCoeffs", "operator-coeffs", "operator_coeffs",
+                   "coeffs", "thetas"},
+                  config);
+  if (!iter.has_value())
+    throw std::runtime_error("uccsd_pool requires coefficient list config "
+                             "parameter of type vector<double>.");
+
+  auto operatorCoeffs =
+      std::any_cast<std::vector<double>>(iter.value()->second);
+
   auto [singlesAlpha, singlesBeta, doublesMixed, doublesAlpha, doublesBeta] =
       cudaq::get_uccsd_excitations(numElectrons, numQubits);
 
@@ -65,7 +75,13 @@ uccsd::generate(const std::unordered_map<std::string, std::any> &config) const {
   for (auto &d : doublesBeta)
     addDoublesExcitation(ops, d[0], d[1], d[2], d[3]);
 
-  return ops;
+  std::vector<spin_op> retOps;
+  for (auto &c : operatorCoeffs) {
+    for (auto &op : ops) {
+      retOps.push_back(c * op);
+    }
+  }
+  return retOps;
 }
 
 } // namespace cudaq

@@ -30,7 +30,9 @@ void bindGse(py::module &mod) {
       std::string asStr = k.cast<std::string>();
 
       if (py::isinstance<py::int_>(v))
-        asCpp.insert({k.cast<std::string>(), v.cast<std::size_t>()});
+        asCpp.insert({asStr, v.cast<std::size_t>()});
+      if (py::isinstance<py::list>(v))
+        asCpp.insert({asStr, v.cast<std::vector<double>>()});
     }
     return operator_pool::get(name)->generate(asCpp);
   });
