@@ -28,12 +28,9 @@ uccsd::generate(const std::unordered_map<std::string, std::any> &config) const {
   iter = findIter({"operatorCoeffs", "operator-coeffs", "operator_coeffs",
                    "coeffs", "thetas"},
                   config);
-  if (!iter.has_value())
-    throw std::runtime_error("uccsd_pool requires coefficient list config "
-                             "parameter of type vector<double>.");
-
-  auto operatorCoeffs =
-      std::any_cast<std::vector<double>>(iter.value()->second);
+  std::vector<double> operatorCoeffs;
+  if (iter.has_value())
+    operatorCoeffs = std::any_cast<std::vector<double>>(iter.value()->second);
 
   auto [singlesAlpha, singlesBeta, doublesMixed, doublesAlpha, doublesBeta] =
       cudaq::get_uccsd_excitations(numElectrons, numQubits);
