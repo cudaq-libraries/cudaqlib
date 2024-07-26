@@ -27,7 +27,6 @@ TEST(GSETester, checkSimpleAdapt) {
 
   auto pool = cudaq::operator_pool::get("spin_complement_gsd");
   auto poolList = pool->generate({{"num-orbitals", h.num_qubits() / 2}});
-
   auto initialState = [&](cudaq::qvector<> &q) __qpu__ {
     for (std::size_t i = 0; i < 2; i++)
       x(q[i]);

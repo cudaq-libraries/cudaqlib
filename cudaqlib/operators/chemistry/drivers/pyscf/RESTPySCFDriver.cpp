@@ -9,7 +9,7 @@
 #include "nlohmann/json.hpp"
 
 #include "cudaqlib/operators/chemistry/MoleculePackageDriver.h"
-#include "cudaqlib/operators/fermion/fermion_to_spin.h"
+#include "cudaqlib/operators/fermion/fermion_compiler.h"
 #include "cudaqlib/utils/library_utils.h"
 
 #include "common/RestClient.h"
@@ -109,7 +109,7 @@ public:
     fermionOp.hpqrs.set_data(hpqrsValues);
 
     // Transform to a spin operator
-    auto transform = fermion_to_spin::get(options.fermion_to_string);
+    auto transform = fermion_compiler::get(options.fermion_to_string);
     auto spinHamiltonian = transform->generate(fermionOp);
 
     // Return the molecular hamiltonian

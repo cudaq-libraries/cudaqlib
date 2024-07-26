@@ -384,7 +384,7 @@ TEST(OperatorsTester, checkJordanWigner) {
   fermionOp.hpq.set_data(h2_hpq_data);
   fermionOp.hpqrs.set_data(h2_hpqrs_data);
 
-  auto jw = fermion_to_spin::get("jordan_wigner");
+  auto jw = fermion_compiler::get("jordan_wigner");
   auto spin = jw->generate(fermionOp);
   auto groundEnergy = spin.to_matrix().minimal_eigenvalue().real();
   EXPECT_NEAR(groundEnergy, -1.137, 1e-3);
@@ -505,9 +505,11 @@ H -0.4691 -0.7570 0.0
 }
 
 TEST(OperatorsTester, checkOneParticleOp) {
-  auto op = cudaq::operators::one_particle_op(4, 4);
+  std::size_t numQubits = 4;
+
+  auto op = cudaq::operators::one_particle_op(4, 1, 1);
   op.dump();
 
-  op = cudaq::operators::one_particle_op(2, 4);
+  op = cudaq::operators::one_particle_op(5, 2, 4);
   op.dump();
 }

@@ -12,6 +12,7 @@ add_library(${LIBRARY_NAME} SHARED
   # Base implementation files
   chemistry/molecule.cpp
   fermion/fermion_op.cpp
+  fermion/fermion_operators.cpp
   # fermion transformations
   fermion/transformations/jordan_wigner.cpp
   # chemistry package drivers

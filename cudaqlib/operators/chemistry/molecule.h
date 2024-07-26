@@ -83,6 +83,7 @@ create_molecule(const molecular_geometry &geometry, const std::string &basis,
                 int spin, int charge,
                 molecule_options options = molecule_options());
 
-spin_op one_particle_op(std::size_t p, std::size_t q);
+spin_op one_particle_op(std::size_t numQubits, std::size_t p, std::size_t q,
+                        const std::string fermionCompiler = "jordan_wigner");
 
 } // namespace cudaq::operators
