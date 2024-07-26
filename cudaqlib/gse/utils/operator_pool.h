@@ -52,20 +52,4 @@ CUDAQ_DEFINE_EXTENSION_IMPL(operator_pool)
     return std::make_unique<TYPE>();                                           \
   }
 
-namespace fermion {
-inline spin_op adag(std::size_t numQubits, std::size_t j) {
-  spin_op zprod(numQubits);
-  for (std::size_t k = 0; k < j; k++)
-    zprod *= spin::z(k);
-  return 0.5 * zprod * (spin::x(j) - std::complex<double>{0, 1} * spin::y(j));
-}
-
-inline spin_op a(std::size_t numQubits, std::size_t j) {
-  spin_op zprod(numQubits);
-  for (std::size_t k = 0; k < j; k++)
-    zprod *= spin::z(k);
-  return 0.5 * zprod * (spin::x(j) + std::complex<double>{0, 1} * spin::y(j));
-}
-} // namespace fermion
-
 } // namespace cudaq

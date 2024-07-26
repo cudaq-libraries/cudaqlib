@@ -7,6 +7,7 @@
  ******************************************************************************/
 #include "molecule.h"
 #include "MoleculePackageDriver.h"
+#include "cudaqlib/operators/fermion/fermion_operators.h"
 
 #include <fstream>
 #include <iostream>
@@ -108,10 +109,10 @@ void molecule_options::dump() {
             << "\n]\n";
 }
 
-spin_op one_particle_op(std::size_t p, std::size_t q) {
-
+spin_op one_particle_op(std::size_t numQubits, std::size_t p, std::size_t q,
+                        const std::string fermionCompiler) {
   if (p == q)
-    return 0.5 * spin::i(p) - 0.5 * spin::z(p);
+    return 0.5 * spin::i(numQubits - 1) * spin::i(p) - 0.5 * spin::z(p);
 
   std::complex<double> coeff(0., 1.);
   double m = -.25;
@@ -134,7 +135,7 @@ spin_op one_particle_op(std::size_t p, std::size_t q) {
   ret += m * spin::y(p) * parity * spin::y(q);
   ret -= coeff * m * spin::y(p) * parity * spin::x(q);
   ret += coeff * m * spin::x(p) * parity * spin::y(q);
-  return ret;
+  return spin::i(numQubits - 1) * ret;
 }
 
 } // namespace cudaq::operators

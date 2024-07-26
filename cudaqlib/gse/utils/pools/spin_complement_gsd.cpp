@@ -7,6 +7,7 @@
  ******************************************************************************/
 
 #include "spin_complement_gsd.h"
+#include "cudaqlib/operators/fermion/fermion_operators.h"
 
 namespace cudaq {
 
@@ -32,11 +33,11 @@ std::vector<spin_op> spin_complement_gsd::generate(
       if (p >= q)
         continue;
       auto oneElectron =
-          fermion::adag(numQubits, q) * fermion::a(numQubits, p) -
-          fermion::adag(numQubits, p) * fermion::a(numQubits, q);
+          operators::adag(numQubits, q) * operators::a(numQubits, p) -
+          operators::adag(numQubits, p) * operators::a(numQubits, q);
       oneElectron +=
-          fermion::adag(numQubits, q + 1) * fermion::a(numQubits, p + 1) -
-          fermion::adag(numQubits, p + 1) * fermion::a(numQubits, q + 1);
+          operators::adag(numQubits, q + 1) * operators::a(numQubits, p + 1) -
+          operators::adag(numQubits, p + 1) * operators::a(numQubits, q + 1);
 
       std::unordered_map<spin_op::spin_op_term, std::complex<double>> terms;
       oneElectron.for_each_term([&](spin_op &term) {
@@ -69,17 +70,18 @@ std::vector<spin_op> spin_complement_gsd::generate(
             continue;
 
           auto twoElectron =
-              fermion::adag(numQubits, r) * fermion::a(numQubits, p) *
-                  fermion::adag(numQubits, s) * fermion::a(numQubits, q) -
-              fermion::adag(numQubits, q) * fermion::a(numQubits, s) *
-                  fermion::adag(numQubits, p) * fermion::a(numQubits, r);
-          twoElectron +=
-              fermion::adag(numQubits, r + 1) * fermion::a(numQubits, p + 1) *
-                  fermion::adag(numQubits, s + 1) *
-                  fermion::a(numQubits, q + 1) -
-              fermion::adag(numQubits, q + 1) * fermion::a(numQubits, s + 1) *
-                  fermion::adag(numQubits, p + 1) *
-                  fermion::a(numQubits, r + 1);
+              operators::adag(numQubits, r) * operators::a(numQubits, p) *
+                  operators::adag(numQubits, s) * operators::a(numQubits, q) -
+              operators::adag(numQubits, q) * operators::a(numQubits, s) *
+                  operators::adag(numQubits, p) * operators::a(numQubits, r);
+          twoElectron += operators::adag(numQubits, r + 1) *
+                             operators::a(numQubits, p + 1) *
+                             operators::adag(numQubits, s + 1) *
+                             operators::a(numQubits, q + 1) -
+                         operators::adag(numQubits, q + 1) *
+                             operators::a(numQubits, s + 1) *
+                             operators::adag(numQubits, p + 1) *
+                             operators::a(numQubits, r + 1);
 
           std::unordered_map<spin_op::spin_op_term, std::complex<double>> terms;
           twoElectron.for_each_term([&](spin_op &term) {
@@ -114,20 +116,21 @@ std::vector<spin_op> spin_complement_gsd::generate(
             continue;
 
           auto twoElectron =
-              fermion::adag(numQubits, r) * fermion::a(numQubits, p) *
-                  fermion::adag(numQubits, s) * fermion::a(numQubits, q) -
-              fermion::adag(numQubits, q) * fermion::a(numQubits, s) *
-                  fermion::adag(numQubits, p) * fermion::a(numQubits, r);
+              operators::adag(numQubits, r) * operators::a(numQubits, p) *
+                  operators::adag(numQubits, s) * operators::a(numQubits, q) -
+              operators::adag(numQubits, q) * operators::a(numQubits, s) *
+                  operators::adag(numQubits, p) * operators::a(numQubits, r);
           if (p > q)
             continue;
 
-          twoElectron +=
-              fermion::adag(numQubits, s - 1) * fermion::a(numQubits, q - 1) *
-                  fermion::adag(numQubits, r + 1) *
-                  fermion::a(numQubits, p + 1) -
-              fermion::adag(numQubits, p + 1) * fermion::a(numQubits, r + 1) *
-                  fermion::adag(numQubits, q - 1) *
-                  fermion::a(numQubits, s - 1);
+          twoElectron += operators::adag(numQubits, s - 1) *
+                             operators::a(numQubits, q - 1) *
+                             operators::adag(numQubits, r + 1) *
+                             operators::a(numQubits, p + 1) -
+                         operators::adag(numQubits, p + 1) *
+                             operators::a(numQubits, r + 1) *
+                             operators::adag(numQubits, q - 1) *
+                             operators::a(numQubits, s - 1);
           std::unordered_map<spin_op::spin_op_term, std::complex<double>> terms;
           twoElectron.for_each_term([&](spin_op &term) {
             auto coeff = term.get_coefficient();

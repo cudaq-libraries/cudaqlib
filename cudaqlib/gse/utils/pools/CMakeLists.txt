@@ -12,7 +12,7 @@ add_library(${LIBRARY_NAME} SHARED uccsd_pool.cpp spin_complement_gsd.cpp)
 target_include_directories(
   ${LIBRARY_NAME}
   PUBLIC $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}>)
-target_link_libraries(${LIBRARY_NAME} PRIVATE cudaq::cudaq-spin)
+target_link_libraries(${LIBRARY_NAME} PRIVATE cudaq::cudaq-spin cudaq-operators)
 
 install(
     TARGETS ${LIBRARY_NAME}

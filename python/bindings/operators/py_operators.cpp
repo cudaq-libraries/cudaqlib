@@ -23,14 +23,14 @@ void bindOperators(py::module &mod) {
   auto operators = mod.def_submodule("operators");
 
   operators.def("jordan_wigner", [](fermion_op &op) {
-    return fermion_to_spin::get("jordan_wigner")->generate(op);
+    return fermion_compiler::get("jordan_wigner")->generate(op);
   });
 
-  py::class_<fermion_to_spin>(operators, "fermion_to_spin")
+  py::class_<fermion_compiler>(operators, "fermion_compiler")
       .def_static(
           "get",
-          [](const std::string &name) { return fermion_to_spin::get(name); })
-      .def("generate", &fermion_to_spin::generate, "");
+          [](const std::string &name) { return fermion_compiler::get(name); })
+      .def("generate", &fermion_compiler::generate, "");
 
   py::class_<one_body_integrals>(operators, "OneBodyIntegrals",
                                  py::buffer_protocol())
@@ -80,7 +80,12 @@ void bindOperators(py::module &mod) {
       .def_readonly("n_electrons", &molecular_hamiltonian::n_electrons)
       .def_readonly("n_orbitals", &molecular_hamiltonian::n_orbitals);
 
-  operators.def("one_particle_op", &one_particle_op, "");
+  operators.def(
+      "one_particle_op",
+      [](std::size_t numQ, std::size_t p, std::size_t q) {
+        return operators::one_particle_op(numQ, p, q);
+      },
+      "");
 
   operators.def(
       "create_molecule",

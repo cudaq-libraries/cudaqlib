@@ -74,7 +74,7 @@ auto adapt_vqe(const InitialState &initialState, const spin_op &H,
     auto maxOpIdx = std::distance(gradients.begin(), iter);
 
     // Convergence is reached if gradient values are small
-    if (std::sqrt(std::fabs(norm)) < options.grad_norm_magnitude ||
+    if (std::sqrt(std::fabs(norm)) < options.grad_norm_tolerance ||
         std::fabs(lastNorm - norm) < options.grad_norm_tolerance)
       break;
 
