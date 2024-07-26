@@ -383,13 +383,14 @@ spin_op jordan_wigner::generate(const fermion_op &fermionOp) {
 }
 
 spin_op jordan_wigner::adag(std::size_t numQubits, std::size_t p) {
-  spin_op zprod(numQubits);
+  spin_op zprod; // = spin::i(numQubits - 1);
   for (std::size_t k = 0; k < p; k++)
     zprod *= spin::z(k);
   return 0.5 * zprod * (spin::x(p) - std::complex<double>{0, 1} * spin::y(p));
 }
+
 spin_op jordan_wigner::a(std::size_t numQubits, std::size_t q) {
-  spin_op zprod(numQubits);
+  spin_op zprod; // = spin::i(numQubits - 1);
   for (std::size_t k = 0; k < q; k++)
     zprod *= spin::z(k);
   return 0.5 * zprod * (spin::x(q) + std::complex<double>{0, 1} * spin::y(q));

@@ -505,11 +505,7 @@ H -0.4691 -0.7570 0.0
 }
 
 TEST(OperatorsTester, checkOneParticleOp) {
-  std::size_t numQubits = 4;
-
   auto op = cudaq::operators::one_particle_op(4, 1, 1);
-  op.dump();
-
-  op = cudaq::operators::one_particle_op(5, 2, 4);
+  EXPECT_EQ(op.num_terms(), 2);
   op.dump();
 }

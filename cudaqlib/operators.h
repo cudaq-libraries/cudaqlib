@@ -9,4 +9,5 @@
 
 #include "operators/chemistry/MoleculePackageDriver.h"
 #include "operators/fermion/fermion_compiler.h"
+#include "operators/fermion/fermion_operators.h"
 #include "operators/fermion/transformations/jordan_wigner.h"

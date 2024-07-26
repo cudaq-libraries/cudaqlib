@@ -111,7 +111,31 @@ void molecule_options::dump() {
 
 spin_op one_particle_op(std::size_t numQubits, std::size_t p, std::size_t q,
                         const std::string fermionCompiler) {
-  return adag(numQubits, p, fermionCompiler) * a(numQubits, q, fermionCompiler);
+  if (p == q)
+    return 0.5 * spin::i(numQubits - 1) * spin::i(p) - 0.5 * spin::z(p);
+
+  std::complex<double> coeff(0., 1.);
+  double m = -.25;
+  if (p > q) {
+    std::swap(p, q);
+    coeff = std::conj(coeff);
+  }
+
+  std::vector<std::size_t> z_indices;
+  for (auto i : cudaq::range((long)p + 1, (long)q))
+    z_indices.push_back(i);
+
+  auto parity = spin::z(z_indices.front());
+  for (std::size_t i = 1; i < z_indices.size(); i++) {
+    parity *= spin::z(i);
+  }
+
+  auto ret = m * spin::x(p) * parity * spin::x(q);
+
+  ret += m * spin::y(p) * parity * spin::y(q);
+  ret -= coeff * m * spin::y(p) * parity * spin::x(q);
+  ret += coeff * m * spin::x(p) * parity * spin::y(q);
+  return spin::i(numQubits - 1) * ret;
 }
 
 } // namespace cudaq::operators
