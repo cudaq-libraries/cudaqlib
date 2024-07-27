@@ -8,9 +8,12 @@
 
 #pragma once
 
+#include "cudaq.h"
 #include "cudaq/qis/qubit_qis.h"
 #include "cudaqlib/gse/utils/operator_pool.h"
 #include "cudaqlib/gse/vqe/vqe.h"
+
+#include <functional>
 
 namespace cudaq::gse {
 
@@ -33,6 +36,10 @@ struct AdaptKernel {
   }
 };
 
+inline __qpu__ void gradientKernel(cudaq::state &initState) {
+  cudaq::qvector q{initState};
+}
+
 template <typename InitialState>
 auto adapt_vqe(const InitialState &initialState, const spin_op &H,
                const std::vector<spin_op> &poolList,
@@ -43,22 +50,55 @@ auto adapt_vqe(const InitialState &initialState, const spin_op &H,
   std::vector<spin_op> trotterList;
   std::vector<double> thetas;
   auto numQubits = H.num_qubits();
+  // Assumes each rank can see numQpus, models a distributed
+  // architecture where each rank is a compute node, and each node
+  // has numQpus GPUs available. Each GPU is indexed 0, 1, 2, ..
+  std::size_t numQpus = cudaq::get_platform().num_qpus();
+  std::size_t numRanks =
+      cudaq::mpi::is_initialized() ? cudaq::mpi::num_ranks() : 1;
+  std::size_t rank = cudaq::mpi::is_initialized() ? cudaq::mpi::rank() : 0;
   double energy = 0.0, lastNorm = std::numeric_limits<double>::max();
 
+  // poolList is split into numRanks chunks, and each chunk can be
+  // further parallelized across numQpus.
   // Compute the [H,Oi]
   std::vector<spin_op> commutators;
-  for (auto &op : poolList)
+  std::size_t total_elements = poolList.size();
+  std::size_t elements_per_rank = total_elements / numRanks;
+  std::size_t remainder = total_elements % numRanks;
+  std::size_t start = rank * elements_per_rank + std::min(rank, remainder);
+  std::size_t end = start + elements_per_rank + (rank < remainder ? 1 : 0);
+  for (int i = start; i < end; i++) {
+    auto op = poolList[i];
     commutators.emplace_back(H * op - op * H);
+  }
+
+  // We'll need to know the local to global index map
+  std::vector<std::size_t> localToGlobalMap(end - start);
+  for (int i = 0; i < end - start; i++)
+    localToGlobalMap[i] = start + i;
+
+  // Start of with the initial |psi_n>
+  cudaq::state state =
+      get_state(kernel, numQubits, initialState, thetas, trotterList);
 
   while (true) {
 
     // Step 1 - compute <psi|[H,Oi]|psi> vector
     std::vector<double> gradients;
     double gradNorm = 0.0;
+    std::vector<async_observe_result> resultHandles;
+    for (std::size_t i = 0, qpuCounter = 0; i < commutators.size(); i++) {
+      if (qpuCounter % numQpus == 0)
+        qpuCounter = 0;
+
+      resultHandles.emplace_back(
+          observe_async(qpuCounter++, gradientKernel, commutators[i], state));
+    }
+
     std::vector<observe_result> results;
-    for (std::size_t i = 0; i < commutators.size(); i++)
-      results.emplace_back(observe(kernel, commutators[i], numQubits,
-                                   initialState, thetas, trotterList));
+    for (auto &handle : resultHandles)
+      results.emplace_back(handle.get());
 
     // Get the gradient results
     std::transform(results.begin(), results.end(),
@@ -70,8 +110,36 @@ auto adapt_vqe(const InitialState &initialState, const spin_op &H,
     for (auto &g : gradients)
       norm += g * g;
 
+    // All ranks have a norm, need to reduce that across all
+    if (mpi::is_initialized())
+      norm = cudaq::mpi::all_reduce(norm, std::plus<double>());
+
+    // All ranks have a max gradient and index
     auto iter = std::max_element(gradients.begin(), gradients.end());
+    double maxGrad = *iter;
     auto maxOpIdx = std::distance(gradients.begin(), iter);
+    if (mpi::is_initialized()) {
+      std::vector<int> allMaxOpIndices(numRanks);
+      std::vector<double> allMaxGrads(numRanks);
+      // Distribute the max gradient from this rank to others
+      cudaq::mpi::all_gather(allMaxGrads, {*iter});
+      // Distribute the corresponding idx from this rank to others,
+      // make sure we map back to global indices
+      cudaq::mpi::all_gather(allMaxOpIndices,
+                             {static_cast<int>(localToGlobalMap[maxOpIdx])});
+
+      // Everyone has the indices, loop over and pick out the
+      // max from all calculations
+      std::size_t cachedIdx = 0;
+      double cachedGrad = 0.0;
+      for (std::size_t i = 0; i < allMaxGrads.size(); i++)
+        if (allMaxGrads[i] > cachedGrad) {
+          cachedGrad = allMaxGrads[i];
+          cachedIdx = allMaxOpIndices[i];
+        }
+
+      maxOpIdx = cachedIdx;
+    }
 
     // Convergence is reached if gradient values are small
     if (std::sqrt(std::fabs(norm)) < options.grad_norm_tolerance ||
@@ -105,6 +173,7 @@ auto adapt_vqe(const InitialState &initialState, const spin_op &H,
     // Set the new optimzal parameters
     thetas = result.optimal_parameters;
     energy = result.energy;
+    state = get_state(wrapperKernel, thetas);
   }
 
   return energy;

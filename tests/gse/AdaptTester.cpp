@@ -37,7 +37,6 @@ TEST(GSETester, checkSimpleAdapt) {
   EXPECT_NEAR(energy, -1.13, 1e-2);
 }
 
-
 TEST(GSETester, checkSimpleAdaptMPI) {
   cudaq::mpi::initialize();
   std::vector<double> h2_data{
