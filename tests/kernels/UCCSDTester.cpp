@@ -314,7 +314,7 @@ TEST(UCCSDTester, checkUCCSDAnsatz) {
   EXPECT_TRUE(singlesBeta.size() == 1);
   EXPECT_TRUE(doublesMixed.size() == 1);
 
-  auto numParams = cudaq::get_num_uccsd_parameters(numElectrons, numQubits);
+  auto numParams = cudaq::uccsd_num_parameters(numElectrons, numQubits);
   std::vector<double> init{-2., -2., -2.};
 
   cudaq::optim::cobyla optimizer;

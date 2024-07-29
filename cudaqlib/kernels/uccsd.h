@@ -94,7 +94,7 @@ get_uccsd_excitations(std::size_t numElectrons, std::size_t numQubits) {
                          doublesBeta);
 }
 
-auto get_num_uccsd_parameters(std::size_t numElectrons, std::size_t numQubits) {
+auto uccsd_num_parameters(std::size_t numElectrons, std::size_t numQubits) {
   auto [singlesAlpha, singlesBeta, doublesMixed, doublesAlpha, doublesBeta] =
       get_uccsd_excitations(numElectrons, numQubits);
   return singlesAlpha.size() + singlesBeta.size() + doublesMixed.size() +
