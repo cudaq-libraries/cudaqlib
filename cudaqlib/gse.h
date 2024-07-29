@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "gse/adapt/fast_adapt.h"
+#include "gse/adapt/adapt.h"
 #include "gse/utils/operator_pool.h"
 #include "gse/utils/pools/spin_complement_gsd.h"
 #include "gse/utils/pools/uccsd_pool.h"
