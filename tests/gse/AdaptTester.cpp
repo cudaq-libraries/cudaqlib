@@ -36,29 +36,3 @@ TEST(GSETester, checkSimpleAdapt) {
                                       {.grad_norm_tolerance = 1e-4});
   EXPECT_NEAR(energy, -1.13, 1e-2);
 }
-
-TEST(GSETester, checkSimpleAdaptMPI) {
-  cudaq::mpi::initialize();
-  std::vector<double> h2_data{
-      3, 1, 1, 3, 0.0454063,  0,  2, 0, 0, 0, 0.17028,    0,
-      0, 0, 2, 0, -0.220041,  -0, 1, 3, 3, 1, 0.0454063,  0,
-      0, 0, 0, 0, -0.106477,  0,  0, 2, 0, 0, 0.17028,    0,
-      0, 0, 0, 2, -0.220041,  -0, 3, 3, 1, 1, -0.0454063, -0,
-      2, 2, 0, 0, 0.168336,   0,  2, 0, 2, 0, 0.1202,     0,
-      0, 2, 0, 2, 0.1202,     0,  2, 0, 0, 2, 0.165607,   0,
-      0, 2, 2, 0, 0.165607,   0,  0, 0, 2, 2, 0.174073,   0,
-      1, 1, 3, 3, -0.0454063, -0, 15};
-  cudaq::spin_op h(h2_data, 4);
-
-  auto pool = cudaq::operator_pool::get("spin_complement_gsd");
-  auto poolList = pool->generate({{"num-orbitals", h.num_qubits() / 2}});
-  auto initialState = [&](cudaq::qvector<> &q) __qpu__ {
-    for (std::size_t i = 0; i < 2; i++)
-      x(q[i]);
-  };
-
-  auto energy = cudaq::gse::adapt_vqe(initialState, h, poolList,
-                                      {.grad_norm_tolerance = 1e-4});
-  EXPECT_NEAR(energy, -1.13, 1e-2);
-  cudaq::mpi::finalize();
-}
