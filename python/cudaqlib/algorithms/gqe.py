@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import time
 from ml_collections import ConfigDict
+import cudaq 
 
 torch.set_float32_matmul_precision('high')
 
@@ -232,9 +233,10 @@ def gqe(cost, pool, config=None, **kwargs):
 
     # Don't let someone override the vocab_size
     cfg.vocab_size = len(pool)
-
+    cudaqTarget = cudaq.get_target() 
+    numQPUs = cudaqTarget.num_qpus() 
     model = Transformer(
-        cfg, cost, loss='exp') if 'model' not in kwargs else kwargs['model']
+        cfg, cost, loss='exp', numQPUs=numQPUs) if 'model' not in kwargs else kwargs['model']
     optimizer = torch.optim.AdamW(
         model.parameters(),
         lr=cfg.lr) if 'optimizer' not in kwargs else kwargs['optimizer']

@@ -21,9 +21,10 @@ class SmallConfig(GPT2Config):
 
 class Transformer(LightningModule):
 
-    def __init__(self, cfg, cost, loss="exp"):
+    def __init__(self, cfg, cost, loss="exp", numQPUs=1):
         super().__init__()
         self._label = 'label_stand_in'
+        self.numQPUs = numQPUs
         self.cfg = cfg
         gpt2cfg = GPT2Config(
             **{k: cfg[k]
@@ -64,9 +65,25 @@ class Transformer(LightningModule):
                             idx.reshape(b_size, -1, 1)).reshape(b_size, -1)
 
     def computeCost(self, idx_output, pool, **kwargs):
-        return torch.tensor(
-            [self._cost([pool[i] for i in row]) for row in idx_output],
-            dtype=torch.float)
+        print('compute cost')
+        res = [
+            self._cost([pool[i]
+                        for i in row], qpu_id=i % self.numQPUs)
+            for i, row in enumerate(idx_output)
+        ]
+        print('we have ', len(res), ' handles')
+        if isinstance(res[0], tuple) and len(res[0]) == 2:
+            print('We are here')
+            res = [
+                getScalarFromHandleFunctor(handle)
+                for (handle, getScalarFromHandleFunctor) in res
+            ]
+
+        if not isinstance(res[0], float):
+            raise RuntimeError(
+                'Invalid return type detected from user cost function.')
+
+        return torch.tensor(res, dtype=torch.float)
 
     def train_step(self,
                    pool,

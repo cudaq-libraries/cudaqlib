@@ -27,7 +27,7 @@ def init(q: cudaq.qview):
 
 
 # Define the GQE cost function
-def cost(sampledPoolOperations: list):
+def cost(sampledPoolOperations: list, **kwargs):
     """
     Cost should take operator pool indices and 
     return the associated cost. For the chemistry 
