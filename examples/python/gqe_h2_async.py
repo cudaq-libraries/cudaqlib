@@ -1,4 +1,4 @@
-import cudaq, cudaqlib, random
+import cudaq, cudaqlib
 
 # Define the molecule
 geometry = [('H', (0., 0., 0.)), ('H', (0., 0., .7474))]
@@ -11,9 +11,6 @@ hamiltonian = molecule.hamiltonian
 numQubits = molecule.hamiltonian.get_qubit_count()
 
 # Create the operator pool
-# ops = ['XXXY', 'YYXX', 'XZXX', 'YYXX']
-# pool = [cudaq.SpinOperator.from_word(w) for w in ops]
-
 pool = cudaqlib.gse.get_operator_pool('uccsd',
                                       num_qubits=4,
                                       num_electrons=2,
