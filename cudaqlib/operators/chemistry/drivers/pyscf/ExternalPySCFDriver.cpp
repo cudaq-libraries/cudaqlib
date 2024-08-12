@@ -88,7 +88,7 @@ public:
     // Import all the data we need from the execution.
     std::ifstream f(metadataFile);
     auto metadata = nlohmann::json::parse(f);
-    printf("TEST\n%s\n", metadata.dump(4).c_str());
+    
     // Get the energy, num orbitals, and num qubits
     std::unordered_map<std::string, double> energies;
     for (auto &[energyName, E] : metadata["energies"].items())

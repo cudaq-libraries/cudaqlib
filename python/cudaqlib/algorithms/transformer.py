@@ -4,6 +4,7 @@ from transformers import GPT2LMHeadModel, GPT2Config
 from lightning import LightningModule
 from .loss import ExpLogitMatching, GFlowLogitMatching
 
+
 def get_device():
     if torch.cuda.is_available():
         return 'cuda'
@@ -20,16 +21,18 @@ class SmallConfig(GPT2Config):
 
 class Transformer(LightningModule):
 
-    def __init__(self, cfg, cost,  loss="exp"):
+    def __init__(self, cfg, cost, loss="exp"):
         super().__init__()
         self._label = 'label_stand_in'
         self.cfg = cfg
         gpt2cfg = GPT2Config(
-            **{k: cfg[k] for k in GPT2Config().to_dict().keys() & cfg.keys()})
+            **{k: cfg[k]
+               for k in GPT2Config().to_dict().keys() & cfg.keys()})
         if cfg.small:
-            gpt2cfg = SmallConfig(
-                **
-                {k: cfg[k] for k in GPT2Config().to_dict().keys() & cfg.keys()})
+            gpt2cfg = SmallConfig(**{
+                k: cfg[k]
+                for k in GPT2Config().to_dict().keys() & cfg.keys()
+            })
         self.transformer = GPT2LMHeadModel(gpt2cfg).to(get_device())
         self.ngates = cfg.ngates
         self.num_samples = cfg.num_samples
@@ -57,14 +60,20 @@ class Transformer(LightningModule):
 
     def gather(self, idx, logits_base):
         b_size = idx.shape[0]
-        return torch.gather(logits_base, 2, idx.reshape(b_size, -1,
-                                                        1)).reshape(b_size, -1)
+        return torch.gather(logits_base, 2,
+                            idx.reshape(b_size, -1, 1)).reshape(b_size, -1)
 
     def computeCost(self, idx_output, pool, **kwargs):
-        return torch.tensor([self._cost([pool[i] for i in row]) for row in idx_output],
-                            dtype=torch.float)
+        return torch.tensor(
+            [self._cost([pool[i] for i in row]) for row in idx_output],
+            dtype=torch.float)
 
-    def train_step(self, pool, indices=None, energies=None, numQPUs=None, comm=None):
+    def train_step(self,
+                   pool,
+                   indices=None,
+                   energies=None,
+                   numQPUs=None,
+                   comm=None):
         log_values = {}
         if energies is not None:
             assert indices is not None
@@ -72,7 +81,10 @@ class Transformer(LightningModule):
             logits_base = self.generate_logits(idx_output)
         else:
             idx_output, logits_base = self.generate()
-            energies = self.computeCost(idx_output, pool, numQPUs=numQPUs, comm=comm)
+            energies = self.computeCost(idx_output,
+                                        pool,
+                                        numQPUs=numQPUs,
+                                        comm=comm)
         logits_tensor = self.gather(idx_output, logits_base)
         allLogits = logits_tensor
 
