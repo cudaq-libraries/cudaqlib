@@ -2,26 +2,26 @@ import cudaq, cudaqlib, random
 
 # Define the molecule
 geometry = [('H', (0., 0., 0.)), ('H', (0., 0., .7474))]
-hamiltonian, _ = cudaq.chemistry.create_molecular_hamiltonian(geometry, 'sto-3g', 1, 0)
+molecule = cudaqlib.operators.create_molecule(geometry, 'sto-3g', 0, 0)
 
 # Get the number of qubits
-# hamiltonian = molecule.hamiltonian
+hamiltonian = molecule.hamiltonian
 
 # Get the number of qubits
-numQubits = hamiltonian.get_qubit_count()
+numQubits = molecule.hamiltonian.get_qubit_count()
 
 # Create the operator pool
-ops = ['XXXY', 'YYXX', 'XZXX', 'YYXX']
-pool = [cudaq.SpinOperator.from_word(w) for w in ops]
+# ops = ['XXXY', 'YYXX', 'XZXX', 'YYXX']
+# pool = [cudaq.SpinOperator.from_word(w) for w in ops]
 
-# pool = cudaqlib.gse.get_operator_pool('uccsd',
-#                                       num_qubits=4,
-#                                       num_electrons=2,
-#                                       operator_coeffs=[
-#                                           0.003125, -0.003125, 0.00625,
-#                                           -0.00625, 0.0125, -0.0125, 0.025,
-#                                           -0.025, 0.05, -0.05, 0.1, -0.1
-#                                       ])
+pool = cudaqlib.gse.get_operator_pool('uccsd',
+                                      num_qubits=4,
+                                      num_electrons=2,
+                                      operator_coeffs=[
+                                          0.003125, -0.003125, 0.00625,
+                                          -0.00625, 0.0125, -0.0125, 0.025,
+                                          -0.025, 0.05, -0.05, 0.1, -0.1
+                                      ])
 
 # Need an initial state
 @cudaq.kernel
@@ -38,7 +38,7 @@ def kernel(numQubits: int, coeffs: list[float],
         exp_pauli(coeffs[i], q, word)
 
 # Define the GQE cost function
-def cost(sampledPoolOperations: list, ham, qpu_id : int = 0):
+def cost(sampledPoolOperations: list, qpu_id : int = 0):
     """
     Cost should take operator pool indices and 
     return the associated cost. For the chemistry 
@@ -61,19 +61,13 @@ def cost(sampledPoolOperations: list, ham, qpu_id : int = 0):
                                operatorCoeffs,
                                asWords,
                                qpu_id=qpu_id)
+    
     # If in async mode, you return the async handle and the 
     # functor that extracts the scalar you care about 
     return handle, lambda res: res.get().expectation()
 
-# 5 rows of random elements
-random_elements = [random.sample(pool, 3) for _ in range(5)]
-res = [cost(row) for row in random_elements]
-values = [handle.get() for handle, functor in res]
-print(values)
-
-
-# minE, optimPoolOps = cudaqlib.gqe(cost, pool, max_iters=20)
-# print(f'Ground Energy = {minE}')
-# print('Ansatz Ops')
-# for idx in optimPoolOps:
-#     print(pool[idx].get_coefficient().real, pool[idx].to_string(False))
+minE, optimPoolOps = cudaqlib.gqe(cost, pool, max_iters=20)
+print(f'Ground Energy = {minE}')
+print('Ansatz Ops')
+for idx in optimPoolOps:
+    print(pool[idx].get_coefficient().real, pool[idx].to_string(False))

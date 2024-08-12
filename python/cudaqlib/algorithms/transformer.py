@@ -65,15 +65,12 @@ class Transformer(LightningModule):
                             idx.reshape(b_size, -1, 1)).reshape(b_size, -1)
 
     def computeCost(self, idx_output, pool, **kwargs):
-        print('compute cost')
         res = [
             self._cost([pool[i]
                         for i in row], qpu_id=i % self.numQPUs)
             for i, row in enumerate(idx_output)
         ]
-        print('we have ', len(res), ' handles')
         if isinstance(res[0], tuple) and len(res[0]) == 2:
-            print('We are here')
             res = [
                 getScalarFromHandleFunctor(handle)
                 for (handle, getScalarFromHandleFunctor) in res
@@ -83,6 +80,8 @@ class Transformer(LightningModule):
             raise RuntimeError(
                 'Invalid return type detected from user cost function.')
 
+        # FIXME need to perform MPI all gather here
+        
         return torch.tensor(res, dtype=torch.float)
 
     def train_step(self,
