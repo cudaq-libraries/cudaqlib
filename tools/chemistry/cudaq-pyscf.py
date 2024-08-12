@@ -94,7 +94,6 @@ if not args.server_mode:
         for (k, v) in vars(args).items() if k not in filterArgs
     }
     res = hamiltonianGenerator.generate(args.xyz, args.basis, **filteredArgs)
-    print(res)
 
     exit(0)
 

@@ -223,11 +223,16 @@ def __internal_run_gqe(temperature_scheduler: TemperatureScheduler,
     fabric.log('circuit', json.dumps(min_indices))
     return min_energy, min_indices
 
-
 def gqe(cost, pool, config=None, **kwargs):
-    cfg = get_default_config() if config == None else config
+    cfg = get_default_config() 
+    if config == None: 
+        [setattr(cfg, a, kwargs[a]) for a in dir(cfg) if not a.startswith('_') and a in kwargs]
+    else:
+        cfg = config
+
+    # Don't let someone override the vocab_size
     cfg.vocab_size = len(pool)
-    if 'max_iters' in kwargs: cfg.max_iters = kwargs['max_iters']
+
     model = Transformer(
         cfg, cost, loss='exp') if 'model' not in kwargs else kwargs['model']
     optimizer = torch.optim.AdamW(
