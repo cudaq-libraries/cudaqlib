@@ -5,9 +5,6 @@ geometry = [('H', (0., 0., 0.)), ('H', (0., 0., .7474))]
 molecule = cudaqlib.operators.create_molecule(geometry, 'sto-3g', 0, 0)
 
 # Get the number of qubits
-hamiltonian = molecule.hamiltonian
-
-# Get the number of qubits
 numQubits = molecule.hamiltonian.get_qubit_count()
 
 # Create the operator pool

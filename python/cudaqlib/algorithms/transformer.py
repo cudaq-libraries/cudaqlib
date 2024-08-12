@@ -45,11 +45,9 @@ class Transformer(LightningModule):
                                          device=get_device())
         if loss == "exp":
             self.loss = ExpLogitMatching(cfg.energy_offset, self._label)
-            print("ExpMatching")
         else:
             self.loss = GFlowLogitMatching(cfg.energy_offset, get_device(),
                                            self._label, self)
-            print("GFlow")
         self._cost = cost
 
     def generate_logits(self, idx):
@@ -70,6 +68,7 @@ class Transformer(LightningModule):
                         for i in row], qpu_id=i % self.numQPUs)
             for i, row in enumerate(idx_output)
         ]
+
         if isinstance(res[0], tuple) and len(res[0]) == 2:
             res = [
                 getScalarFromHandleFunctor(handle)
