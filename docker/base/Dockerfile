@@ -14,4 +14,4 @@ RUN cd .. && git clone -b cudaqlib https://github.com/amccaskey/cuda-quantum \
      -DCUDAQ_ENABLE_PYTHON=TRUE -DCMAKE_INSTALL_PREFIX=$HOME/.cudaq \
   && ninja install \
   && apt-get update && apt-get install -y gfortran libblas-dev \
-  && python3 -m pip install cppe torch lightning ml-collections
+  && python3 -m pip install mpi4py transformers cppe torch lightning ml-collections

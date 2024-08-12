@@ -8,6 +8,8 @@
 
 #include "nlohmann/json.hpp"
 
+#include "cudaq.h"
+
 #include "cudaqlib/operators/chemistry/MoleculePackageDriver.h"
 #include "cudaqlib/operators/fermion/fermion_compiler.h"
 #include "cudaqlib/utils/library_utils.h"
@@ -42,6 +44,9 @@ public:
   createMolecule(const molecular_geometry &geometry, const std::string &basis,
                  int spin, int charge, molecule_options options) override {
     std::string toolPath, xyzFileStr = "", outFileName = "tmpFileToBeDeleted";
+    if (cudaq::mpi::is_initialized())
+      outFileName += "_" + std::to_string(cudaq::mpi::rank());
+
     std::string oneBodyFile = outFileName + "_one_body.dat";
     std::string twoBodyFile = outFileName + "_two_body.dat";
     std::string metadataFile = outFileName + "_metadata.json";
@@ -88,7 +93,7 @@ public:
     // Import all the data we need from the execution.
     std::ifstream f(metadataFile);
     auto metadata = nlohmann::json::parse(f);
-    
+
     // Get the energy, num orbitals, and num qubits
     std::unordered_map<std::string, double> energies;
     for (auto &[energyName, E] : metadata["energies"].items())
