@@ -30,7 +30,7 @@ jobs:
     - name: Build CUDAQLib 
       id: cudaq_build
       run: |
-        DOCKER_BUILDKIT=1 docker build --network host --build-arg="branch=${{ steps.extract_branch.outputs.branch }}" \
+        DOCKER_BUILDKIT=1 docker build --no-cache --network host --build-arg="branch=${{ steps.extract_branch.outputs.branch }}" \
           --build-arg="repo=${{github.event.pull_request.head.repo.full_name}}" -t cudaqlib-dev:local -f docker/ci/Dockerfile .
 
     - name: Run tests
