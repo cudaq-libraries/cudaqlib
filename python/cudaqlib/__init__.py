@@ -12,6 +12,6 @@ from ._pycudaqlib import *
 from .kernels import *
 try:
     from .algorithms.gqe import gqe
-except:
-    print('[cudaqlib warning] Could not import GQE module. Install required modules (e.g. torch)')
+except Exception as error:
+    print('[cudaqlib warning] Could not import GQE module. Install required modules (e.g. torch):\n', error)
     pass

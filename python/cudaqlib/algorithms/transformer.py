@@ -1,4 +1,5 @@
-import torch
+import torch, cudaq
+from mpi4py import MPI
 from torch.nn import functional as F
 from transformers import GPT2LMHeadModel, GPT2Config
 from lightning import LightningModule
@@ -21,9 +22,10 @@ class SmallConfig(GPT2Config):
 
 class Transformer(LightningModule):
 
-    def __init__(self, cfg, cost, loss="exp"):
+    def __init__(self, cfg, cost, loss="exp", numQPUs=1):
         super().__init__()
         self._label = 'label_stand_in'
+        self.numQPUs = numQPUs
         self.cfg = cfg
         gpt2cfg = GPT2Config(
             **{k: cfg[k]
@@ -44,11 +46,9 @@ class Transformer(LightningModule):
                                          device=get_device())
         if loss == "exp":
             self.loss = ExpLogitMatching(cfg.energy_offset, self._label)
-            print("ExpMatching")
         else:
             self.loss = GFlowLogitMatching(cfg.energy_offset, get_device(),
                                            self._label, self)
-            print("GFlow")
         self._cost = cost
 
     def generate_logits(self, idx):
@@ -63,10 +63,44 @@ class Transformer(LightningModule):
         return torch.gather(logits_base, 2,
                             idx.reshape(b_size, -1, 1)).reshape(b_size, -1)
 
+    @torch.no_grad()
     def computeCost(self, idx_output, pool, **kwargs):
-        return torch.tensor(
-            [self._cost([pool[i] for i in row]) for row in idx_output],
-            dtype=torch.float)
+        res = []
+        if cudaq.mpi.is_initialized():
+            rank = cudaq.mpi.rank()
+            numRanks = cudaq.mpi.num_ranks()
+            total_elements = len(idx_output)
+            elements_per_rank = total_elements // numRanks
+            remainder = total_elements % numRanks
+            start = rank * elements_per_rank + min(rank, remainder)
+            end = start + elements_per_rank + (1 if rank < remainder else 0)
+            # This MPI rank owns rows[start:end]
+            res = [
+                self._cost([pool[j] for j in row], qpu_id=i % self.numQPUs)
+                for i, row in enumerate(idx_output[start:end])
+            ]
+        else:
+            res = [
+                self._cost([pool[j] for j in row], qpu_id=i % self.numQPUs)
+                for i, row in enumerate(idx_output)
+            ]
+
+        if isinstance(res[0], tuple) and len(res[0]) == 2:
+            res = [
+                getScalarFromHandleFunctor(handle)
+                for (handle, getScalarFromHandleFunctor) in res
+            ]
+
+        if not isinstance(res[0], float):
+            raise RuntimeError(
+                'Invalid return type detected from user cost function.')
+
+        # Need to perform MPI all gather here
+        if cudaq.mpi.is_initialized():
+            res = MPI.COMM_WORLD.allgather(res)
+            res = [x for xs in res for x in xs]
+
+        return torch.tensor(res, dtype=torch.float)
 
     def train_step(self,
                    pool,
