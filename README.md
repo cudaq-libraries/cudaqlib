@@ -38,4 +38,3 @@ ninja
 export PYTHONPATH=$HOME/.cudaq:$PWD/python/cudaqlib
 ctest 
 ```
-
