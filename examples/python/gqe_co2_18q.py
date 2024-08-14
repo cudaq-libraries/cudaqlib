@@ -5,7 +5,7 @@ distance = 1.1621
 geometry = [('O', (0., 0., 0.)), ('C', (0., 0., distance)), ('O', (0., 0., 2*distance))]
 molecule = cudaqlib.operators.create_molecule(geometry, 'sto-3g', 0, 0, MP2=True, nele_cas=10, norb_cas=9)
 
-# Get the number of qubits
+# Get the system Hamiltonian
 hamiltonian = molecule.hamiltonian
 
 # Get the number of qubits
