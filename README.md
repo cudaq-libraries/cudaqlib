@@ -73,7 +73,11 @@ The available config options are provided in the table below:
 The `**kwargs` takes the following args:
 | **arg**                | **Description**   |
 |------------------------|-------------------|
-| `max_iters`            | Overrides cfg.max_iters for total number of epochs to run |
-| `energy_offset`        | Overrides cfg.energy_offset for offset to add to expectation value |
 | `model`                | Can pass in an already constructed transformer |
 | `optimizer`            | Can pass in an already constructed optimizer |
+
+In addition, `**kwargs` can be used to overwrite any of the default configs if you don't pass in a full config object, i.e:
+| **arg**                | **Description**   |
+|------------------------|-------------------|
+| `max_iters`            | Overrides cfg.max_iters for total number of epochs to run |
+| `energy_offset`        | Overrides cfg.energy_offset for offset to add to expectation value |
