@@ -19,31 +19,37 @@ using excitation_list = std::vector<std::vector<std::size_t>>;
 
 std::tuple<excitation_list, excitation_list, excitation_list, excitation_list,
            excitation_list>
-get_uccsd_excitations(std::size_t numElectrons, std::size_t numQubits) {
+get_uccsd_excitations(std::size_t numElectrons, std::size_t spin,
+                      std::size_t numQubits) {
+  if (numQubits % 2 != 0)
+    throw std::runtime_error("The total number of qubits should be even.");
+
   auto numSpatialOrbs = numQubits / 2;
-  // check rounding
-  auto numOccupied = static_cast<std::size_t>(std::ceil(numElectrons / 2));
-  auto numVirtual = numSpatialOrbs - numOccupied;
-  excitation_list singlesAlpha, singlesBeta, doublesMixed, doublesAlpha,
-      doublesBeta;
   std::vector<std::size_t> occupiedAlpha, virtualAlpha, occupiedBeta,
       virtualBeta;
+  if (spin > 0) {
+    auto n_occupied_beta =
+        static_cast<std::size_t>(std::floor((float)(numElectrons - spin) / 2));
+    auto n_occupied_alpha = numElectrons - n_occupied_beta;
+    auto n_virtual_alpha = numSpatialOrbs - n_occupied_alpha;
+    auto n_virtual_beta = numSpatialOrbs - n_occupied_beta;
 
-  if (numElectrons % 2 != 0) {
-    for (auto i : cudaq::range(numOccupied))
+    for (auto i : cudaq::range(n_occupied_alpha))
       occupiedAlpha.push_back(i * 2);
 
-    for (auto i : cudaq::range(numVirtual))
+    for (auto i : cudaq::range(n_virtual_alpha))
       virtualAlpha.push_back(i * 2 + numElectrons + 1);
 
-    for (auto i : cudaq::range(numOccupied - 1))
+    for (auto i : cudaq::range(n_occupied_beta))
       occupiedBeta.push_back(i * 2 + 1);
 
-    virtualBeta.push_back(2 * numOccupied - 1);
-    for (auto i : cudaq::range(numVirtual))
-      virtualBeta.push_back(i * 2 + numElectrons + 2);
+    for (auto i : cudaq::range(n_virtual_beta))
+      virtualBeta.push_back(i * 2 + numElectrons - 1);
+  } else if (numElectrons % 2 == 0 && spin == 0) {
+    auto numOccupied =
+        static_cast<std::size_t>(std::floor((float)numElectrons / 2));
+    auto numVirtual = numSpatialOrbs - numOccupied;
 
-  } else {
     for (auto i : cudaq::range(numOccupied))
       occupiedAlpha.push_back(i * 2);
 
@@ -55,7 +61,13 @@ get_uccsd_excitations(std::size_t numElectrons, std::size_t numQubits) {
 
     for (auto i : cudaq::range(numVirtual))
       virtualBeta.push_back(i * 2 + numElectrons + 1);
-  }
+
+  } else
+    throw std::runtime_error("Incorrect spin multiplicity. Number of electrons "
+                             "is odd but spin is 0.");
+
+  excitation_list singlesAlpha, singlesBeta, doublesMixed, doublesAlpha,
+      doublesBeta;
 
   for (auto p : occupiedAlpha)
     for (auto q : virtualAlpha)
@@ -94,9 +106,9 @@ get_uccsd_excitations(std::size_t numElectrons, std::size_t numQubits) {
                          doublesBeta);
 }
 
-auto uccsd_num_parameters(std::size_t numElectrons, std::size_t numQubits) {
+auto uccsd_num_parameters(std::size_t numElectrons, std::size_t numQubits, std::size_t spin = 0) {
   auto [singlesAlpha, singlesBeta, doublesMixed, doublesAlpha, doublesBeta] =
-      get_uccsd_excitations(numElectrons, numQubits);
+      get_uccsd_excitations(numElectrons, spin, numQubits);
   return singlesAlpha.size() + singlesBeta.size() + doublesMixed.size() +
          doublesAlpha.size() + doublesBeta.size();
 }
@@ -552,7 +564,7 @@ __qpu__ void uccsd(cudaq::qview<> qubits, const std::vector<double> &thetas,
                    std::size_t numElectrons) {
 
   auto [singlesAlpha, singlesBeta, doublesMixed, doublesAlpha, doublesBeta] =
-      get_uccsd_excitations(numElectrons, qubits.size());
+      get_uccsd_excitations(numElectrons, 0, qubits.size());
 
   std::size_t thetaCounter = 0;
   for (auto i : cudaq::range(singlesAlpha.size()))
@@ -584,7 +596,7 @@ void uccsd(Kernel &kernel, QuakeValue &qubits, QuakeValue &thetas,
            std::size_t numElectrons, std::size_t numQubits) {
 
   auto [singlesAlpha, singlesBeta, doublesMixed, doublesAlpha, doublesBeta] =
-      get_uccsd_excitations(numElectrons, numQubits);
+      get_uccsd_excitations(numElectrons, 0, numQubits);
 
   std::size_t thetaCounter = 0;
   for (auto i : cudaq::range(singlesAlpha.size())) {

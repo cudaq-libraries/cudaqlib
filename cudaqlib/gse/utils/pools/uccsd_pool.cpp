@@ -32,32 +32,89 @@ uccsd::generate(const std::unordered_map<std::string, std::any> &config) const {
   if (iter.has_value())
     operatorCoeffs = std::any_cast<std::vector<double>>(iter.value()->second);
 
+  std::size_t spin = 0;
+  iter = findIter({"spin"}, config);
+  if (iter.has_value())
+    spin = getIntLike(iter.value()->second);
+
   auto [singlesAlpha, singlesBeta, doublesMixed, doublesAlpha, doublesBeta] =
-      cudaq::get_uccsd_excitations(numElectrons, numQubits);
+      cudaq::get_uccsd_excitations(numElectrons, spin, numQubits);
 
   std::vector<spin_op> ops;
   using namespace cudaq::spin;
 
-  auto addSinglesExcitation = [numQubits](std::vector<spin_op> &ops,
+  auto addSinglesExcitation = [numQubits](std::vector<cudaq::spin_op> &ops,
                                           std::size_t p, std::size_t q) {
-    spin_op o(numQubits);
-    ops.emplace_back(o * spin::y(p) * spin::x(q));
-    ops.emplace_back(o * spin::x(p) * spin::y(q));
+    double parity = 1.0;
+
+    cudaq::spin_op o(numQubits);
+    for (std::size_t i = p + 1; i < q; i++)
+      o *= cudaq::spin::z(i);
+
+    ops.emplace_back(cudaq::spin::y(p) * o * cudaq::spin::x(q));
+    ops.emplace_back(cudaq::spin::x(p) * o * cudaq::spin::y(q));
   };
 
-  auto addDoublesExcitation = [numQubits](std::vector<spin_op> &ops,
+  auto addDoublesExcitation = [numQubits](std::vector<cudaq::spin_op> &ops,
                                           std::size_t p, std::size_t q,
                                           std::size_t r, std::size_t s) {
-    spin_op o(numQubits);
-    ops.emplace_back(o * spin::x(p) * spin::x(q) * spin::x(r) * spin::y(s));
-    ops.emplace_back(o * spin::x(p) * spin::x(q) * spin::y(r) * spin::x(s));
-    ops.emplace_back(o * spin::x(p) * spin::y(q) * spin::y(r) * spin::y(s));
-    ops.emplace_back(o * spin::x(p) * spin::y(q) * spin::x(r) * spin::x(s));
+    cudaq::spin_op parity_a(numQubits), parity_b(numQubits);
+    std::size_t i_occ = 0, j_occ = 0, a_virt = 0, b_virt = 0;
+    if (p < q && r < s) {
+      i_occ = p;
+      j_occ = q;
+      a_virt = r;
+      b_virt = s;
+    }
 
-    ops.emplace_back(o * spin::y(p) * spin::x(q) * spin::x(r) * spin::x(s));
-    ops.emplace_back(o * spin::y(p) * spin::x(q) * spin::y(r) * spin::y(s));
-    ops.emplace_back(o * spin::y(p) * spin::y(q) * spin::x(r) * spin::y(s));
-    ops.emplace_back(o * spin::y(p) * spin::y(q) * spin::y(r) * spin::x(s));
+    else if (p > q && r > s) {
+      i_occ = q;
+      j_occ = p;
+      a_virt = s;
+      b_virt = r;
+    } else if (p < q && r > s) {
+      i_occ = p;
+      j_occ = q;
+      a_virt = s;
+      b_virt = r;
+    } else if
+
+        (p > q && r < s) {
+      i_occ = q;
+      j_occ = p;
+      a_virt = r;
+      b_virt = s;
+    }
+    for (std::size_t i = i_occ + 1; i < j_occ; i++)
+      parity_a *= cudaq::spin::z(i);
+
+    for (std::size_t i = a_virt + 1; i < b_virt; i++)
+      parity_b *= cudaq::spin::z(i);
+
+    ops.emplace_back(cudaq::spin::x(i_occ) * parity_a * cudaq::spin::x(j_occ) *
+                     cudaq::spin::x(a_virt) * parity_b *
+                     cudaq::spin::y(b_virt));
+    ops.emplace_back(cudaq::spin::x(i_occ) * parity_a * cudaq::spin::x(j_occ) *
+                     cudaq::spin::y(a_virt) * parity_b *
+                     cudaq::spin::x(b_virt));
+    ops.emplace_back(cudaq::spin::x(i_occ) * parity_a * cudaq::spin::y(j_occ) *
+                     cudaq::spin::y(a_virt) * parity_b *
+                     cudaq::spin::y(b_virt));
+    ops.emplace_back(cudaq::spin::y(i_occ) * parity_a * cudaq::spin::x(j_occ) *
+                     cudaq::spin::y(a_virt) * parity_b *
+                     cudaq::spin::y(b_virt));
+    ops.emplace_back(cudaq::spin::x(i_occ) * parity_a * cudaq::spin::y(j_occ) *
+                     cudaq::spin::x(a_virt) * parity_b *
+                     cudaq::spin::x(b_virt));
+    ops.emplace_back(cudaq::spin::y(i_occ) * parity_a * cudaq::spin::x(j_occ) *
+                     cudaq::spin::x(a_virt) * parity_b *
+                     cudaq::spin::x(b_virt));
+    ops.emplace_back(cudaq::spin::y(i_occ) * parity_a * cudaq::spin::y(j_occ) *
+                     cudaq::spin::x(a_virt) * parity_b *
+                     cudaq::spin::y(b_virt));
+    ops.emplace_back(cudaq::spin::y(i_occ) * parity_a * cudaq::spin::y(j_occ) *
+                     cudaq::spin::y(a_virt) * parity_b *
+                     cudaq::spin::x(b_virt));
   };
 
   for (auto &sa : singlesAlpha)
@@ -71,6 +128,9 @@ uccsd::generate(const std::unordered_map<std::string, std::any> &config) const {
     addDoublesExcitation(ops, d[0], d[1], d[2], d[3]);
   for (auto &d : doublesBeta)
     addDoublesExcitation(ops, d[0], d[1], d[2], d[3]);
+
+  if (operatorCoeffs.empty())
+    return ops;
 
   std::vector<spin_op> retOps;
   for (auto &c : operatorCoeffs) {
