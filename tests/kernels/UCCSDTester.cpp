@@ -299,7 +299,7 @@ TEST(UCCSDTester, checkUCCSDAnsatz) {
   };
 
   auto [singlesAlpha, singlesBeta, doublesMixed, doublesAlpha, doublesBeta] =
-      cudaq::get_uccsd_excitations(numElectrons, numQubits);
+      cudaq::get_uccsd_excitations(numElectrons, 0, numQubits);
   EXPECT_TRUE(doublesAlpha.empty());
   EXPECT_TRUE(doublesBeta.empty());
   EXPECT_TRUE(singlesAlpha.size() == 1);
